@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ixercise/data/repositories.dart';
 import 'package:ixercise/features/onboarding/exercise_catalog.dart';
 
 class OnboardingState {
@@ -56,7 +57,7 @@ class ExerciseOption {
 }
 
 class OnboardingController extends StateNotifier<OnboardingState> {
-  OnboardingController()
+  OnboardingController(this._repository)
       : super(
           OnboardingState(
             exercises: buildExerciseCatalog()
@@ -67,7 +68,16 @@ class OnboardingController extends StateNotifier<OnboardingState> {
                 .toList(growable: false),
             selectedExerciseIds: <String>{},
           ),
-        );
+        ) {
+    _hydrate();
+  }
+
+  final ExerciseSelectionRepository _repository;
+
+  Future<void> _hydrate() async {
+    final Set<String> selected = await _repository.load();
+    state = state.copyWith(selectedExerciseIds: selected);
+  }
 
   void setQuery(String value) {
     state = state.copyWith(query: value);
@@ -85,10 +95,11 @@ class OnboardingController extends StateNotifier<OnboardingState> {
       next.add(exerciseId);
     }
     state = state.copyWith(selectedExerciseIds: next);
+    _repository.save(next);
   }
 }
 
 final onboardingControllerProvider =
     StateNotifierProvider<OnboardingController, OnboardingState>(
-  (ref) => OnboardingController(),
+  (ref) => OnboardingController(ref.watch(exerciseSelectionRepositoryProvider)),
 );

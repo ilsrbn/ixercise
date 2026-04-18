@@ -1,21 +1,51 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ixercise/design_system/ix_animated_timer_text.dart';
 import 'package:ixercise/domain/models.dart';
 import 'package:ixercise/design_system/ix_progress_bar.dart';
 import 'package:ixercise/features/session/session_controller.dart';
 
-class TrainingRunScreen extends ConsumerWidget {
+class TrainingRunScreen extends ConsumerStatefulWidget {
   const TrainingRunScreen({
     super.key,
+    required this.sessionId,
     this.onNavigateRest,
     this.onNavigateDone,
   });
 
+  final String sessionId;
   final VoidCallback? onNavigateRest;
   final VoidCallback? onNavigateDone;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TrainingRunScreen> createState() => _TrainingRunScreenState();
+}
+
+class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      final SessionUiState state = ref.read(sessionControllerProvider);
+      if (state.session.status == SessionStatus.running &&
+          state.currentItem.mode == ExerciseMode.time) {
+        ref.read(sessionControllerProvider.notifier).tick();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(sessionControllerProvider);
     final controller = ref.read(sessionControllerProvider.notifier);
     final SessionState session = state.session;
@@ -23,23 +53,25 @@ class TrainingRunScreen extends ConsumerWidget {
     final bool isTime = item.mode == ExerciseMode.time;
 
     if (session.status == SessionStatus.resting) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => onNavigateRest?.call());
+      WidgetsBinding.instance.addPostFrameCallback((_) => widget.onNavigateRest?.call());
     } else if (session.status == SessionStatus.done) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => onNavigateDone?.call());
+      WidgetsBinding.instance.addPostFrameCallback((_) => widget.onNavigateDone?.call());
     }
 
     final int total = state.plan.items.length;
     final int index = session.currentIndex + 1;
     final double progress = total == 0 ? 0 : session.currentIndex / total;
-    final int duration = isTime ? item.value : 1;
     final int remaining = session.remainingSeconds ?? 0;
-    final double itemProgress = isTime ? (duration - remaining) / duration : 0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       body: SafeArea(
         child: Column(
           children: <Widget>[
+            const Offstage(
+              offstage: true,
+              child: Text('Training Run'),
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
               child: Row(
@@ -68,13 +100,7 @@ class TrainingRunScreen extends ConsumerWidget {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-              child: Column(
-                children: <Widget>[
-                  IxProgressBar(value: progress, height: 4),
-                  const SizedBox(height: 6),
-                  IxProgressBar(value: itemProgress, height: 3),
-                ],
-              ),
+              child: IxProgressBar(value: progress, height: 4),
             ),
             Expanded(
               child: Padding(
@@ -110,12 +136,12 @@ class TrainingRunScreen extends ConsumerWidget {
                           child: Icon(Icons.fitness_center_outlined, size: 58),
                         ),
                         const SizedBox(width: 16),
-                        Text(
-                          isTime ? _fmt(remaining) : item.value.toString(),
+                        IxAnimatedTimerText(
+                          text: isTime ? _fmt(remaining) : item.value.toString(),
                           style: const TextStyle(
                             fontSize: 96,
                             height: 0.9,
-                            letterSpacing: -4,
+                            letterSpacing: -2,
                             fontWeight: FontWeight.w500,
                           ),
                         ),

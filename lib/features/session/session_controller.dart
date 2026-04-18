@@ -83,6 +83,12 @@ class SessionController extends StateNotifier<SessionUiState> {
 
   final TrainingSessionEngine _engine;
 
+  void startPlan(TrainingPlan plan) {
+    _engine.plan = plan;
+    _engine.reset();
+    _sync();
+  }
+
   void tick({int seconds = 1}) {
     _engine.tick(seconds: seconds);
     _sync();
@@ -97,6 +103,10 @@ class SessionController extends StateNotifier<SessionUiState> {
       }
     } else if (state.session.status == SessionStatus.resting) {
       _engine.skipRest();
+    } else if (state.session.status == SessionStatus.paused &&
+        state.session.remainingSeconds != null) {
+      // If paused during rest, allow skip action without forcing resume first.
+      _engine.skipRest();
     }
     _sync();
   }
@@ -107,6 +117,16 @@ class SessionController extends StateNotifier<SessionUiState> {
     } else {
       _engine.pause();
     }
+    _sync();
+  }
+
+  void adjustRestSeconds(int delta) {
+    _engine.adjustRestSeconds(delta);
+    _sync();
+  }
+
+  void endSession() {
+    _engine.endSession();
     _sync();
   }
 

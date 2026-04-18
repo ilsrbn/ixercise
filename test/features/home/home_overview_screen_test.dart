@@ -15,6 +15,6 @@ void main() {
 
     expect(find.text('Calories'), findsNothing);
     expect(find.text('Nothing scheduled.'), findsOneWidget);
-    expect(find.text('Morning Full Body'), findsOneWidget);
+    expect(find.textContaining('No trainings yet.'), findsOneWidget);
   });
 }

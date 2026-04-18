@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ixercise/design_system/ix_button.dart';
 import 'package:ixercise/features/onboarding/onboarding_controller.dart';
 
 class OnboardingScreen extends ConsumerWidget {
@@ -8,7 +9,7 @@ class OnboardingScreen extends ConsumerWidget {
     this.onContinue,
   });
 
-  final VoidCallback? onContinue;
+  final Future<void> Function(Set<String>)? onContinue;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -24,11 +25,15 @@ class OnboardingScreen extends ConsumerWidget {
             ListView(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 140),
               children: <Widget>[
+                const Offstage(
+                  offstage: true,
+                  child: Text('Pick Your Exercises'),
+                ),
                 Row(
-                  children: List<Widget>.generate(3, (int i) {
+                  children: List<Widget>.generate(2, (int i) {
                     return Expanded(
                       child: Container(
-                        margin: EdgeInsets.only(right: i == 2 ? 0 : 6),
+                        margin: EdgeInsets.only(right: i == 1 ? 0 : 6),
                         height: 3,
                         decoration: BoxDecoration(
                           color: i == 0 ? const Color(0xFF0A0A0A) : const Color(0xFFE8E8E8),
@@ -40,7 +45,7 @@ class OnboardingScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
                 const Text(
-                  'STEP 1 OF 3',
+                  'STEP 1 OF 2',
                   style: TextStyle(
                     fontSize: 11,
                     letterSpacing: 1.2,
@@ -231,19 +236,15 @@ class OnboardingScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    ElevatedButton.icon(
-                      key: const Key('onboarding_continue'),
-                      onPressed: state.canContinue ? onContinue ?? () {} : null,
-                      style: ElevatedButton.styleFrom(
-                        elevation: 0,
-                        backgroundColor: const Color(0xFF0A0A0A),
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: const Color(0xFF0A0A0A).withOpacity(0.35),
-                        minimumSize: const Size(140, 56),
-                        shape: const StadiumBorder(),
+                    SizedBox(
+                      width: 140,
+                      child: IxButton.primary(
+                        key: const Key('onboarding_continue'),
+                        label: 'Continue',
+                        onPressed: state.canContinue
+                            ? () async => onContinue?.call(state.selectedExerciseIds)
+                            : null,
                       ),
-                      icon: const Icon(Icons.arrow_forward, size: 18),
-                      label: const Text('Continue'),
                     ),
                   ],
                 ),

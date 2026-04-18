@@ -43,9 +43,9 @@ class _SessionFlowHarness extends ConsumerWidget {
     final session = ref.watch(sessionControllerProvider).session;
 
     if (session.status == SessionStatus.resting || session.status == SessionStatus.paused) {
-      return const RestScreen();
+      return const RestScreen(sessionId: 'test');
     }
 
-    return const TrainingRunScreen();
+    return const TrainingRunScreen(sessionId: 'test');
   }
 }

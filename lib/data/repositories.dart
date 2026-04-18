@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ixercise/data/local_store.dart';
 import 'package:ixercise/domain/models.dart';
 
@@ -30,3 +31,17 @@ class ScheduleRepository {
 
   Future<void> save(List<Map<String, dynamic>> schedules) => _store.saveSchedules(schedules);
 }
+
+final localStoreProvider = Provider<LocalStore>((ref) => const LocalStore());
+
+final exerciseSelectionRepositoryProvider = Provider<ExerciseSelectionRepository>(
+  (ref) => ExerciseSelectionRepository(ref.watch(localStoreProvider)),
+);
+
+final trainingPlanRepositoryProvider = Provider<TrainingPlanRepository>(
+  (ref) => TrainingPlanRepository(ref.watch(localStoreProvider)),
+);
+
+final scheduleRepositoryProvider = Provider<ScheduleRepository>(
+  (ref) => ScheduleRepository(ref.watch(localStoreProvider)),
+);

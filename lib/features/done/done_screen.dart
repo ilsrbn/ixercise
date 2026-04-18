@@ -5,9 +5,11 @@ import 'package:ixercise/features/session/session_controller.dart';
 class DoneScreen extends ConsumerWidget {
   const DoneScreen({
     super.key,
+    required this.sessionId,
     this.onBackHome,
   });
 
+  final String sessionId;
   final VoidCallback? onBackHome;
 
   @override

@@ -1,114 +1,207 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ixercise/data/repositories.dart';
 import 'package:ixercise/domain/models.dart';
+import 'package:ixercise/domain/training_plan_builder.dart';
 
 class HomeState {
   const HomeState({
     required this.plans,
+    required this.availableExerciseIds,
+    required this.schedulesByPlanId,
+    this.isLoading = true,
   });
 
   final List<TrainingPlan> plans;
+  final List<String> availableExerciseIds;
+  final Map<String, Map<String, dynamic>> schedulesByPlanId;
+  final bool isLoading;
+
+  HomeState copyWith({
+    List<TrainingPlan>? plans,
+    List<String>? availableExerciseIds,
+    Map<String, Map<String, dynamic>>? schedulesByPlanId,
+    bool? isLoading,
+  }) {
+    return HomeState(
+      plans: plans ?? this.plans,
+      availableExerciseIds: availableExerciseIds ?? this.availableExerciseIds,
+      schedulesByPlanId: schedulesByPlanId ?? this.schedulesByPlanId,
+      isLoading: isLoading ?? this.isLoading,
+    );
+  }
 }
 
 class HomeController extends StateNotifier<HomeState> {
-  HomeController()
+  HomeController(this._planRepository, this._selectionRepository, this._scheduleRepository)
       : super(
-          HomeState(
-            plans: const <TrainingPlan>[
-              TrainingPlan(
-                id: 'morning-full-body',
-                name: 'Morning Full Body',
-                items: <TrainingExercise>[
-                  TrainingExercise(
-                    exerciseId: 'Jumping jacks',
-                    mode: ExerciseMode.time,
-                    value: 45,
-                    restSeconds: 15,
-                  ),
-                  TrainingExercise(
-                    exerciseId: 'Push-ups',
-                    mode: ExerciseMode.reps,
-                    value: 12,
-                    restSeconds: 30,
-                  ),
-                  TrainingExercise(
-                    exerciseId: 'Bodyweight squats',
-                    mode: ExerciseMode.reps,
-                    value: 20,
-                    restSeconds: 30,
-                  ),
-                  TrainingExercise(
-                    exerciseId: 'Plank',
-                    mode: ExerciseMode.time,
-                    value: 60,
-                    restSeconds: 30,
-                  ),
-                  TrainingExercise(
-                    exerciseId: 'Lunges',
-                    mode: ExerciseMode.reps,
-                    value: 16,
-                    restSeconds: 30,
-                  ),
-                  TrainingExercise(
-                    exerciseId: 'Mountain climbers',
-                    mode: ExerciseMode.time,
-                    value: 40,
-                    restSeconds: 30,
-                  ),
-                  TrainingExercise(
-                    exerciseId: 'Biceps curls',
-                    mode: ExerciseMode.reps,
-                    value: 15,
-                    restSeconds: 30,
-                  ),
-                  TrainingExercise(
-                    exerciseId: 'Crunches',
-                    mode: ExerciseMode.reps,
-                    value: 20,
-                    restSeconds: 0,
-                  ),
-                ],
-              ),
-              TrainingPlan(
-                id: 'core-express',
-                name: 'Core Express',
-                items: <TrainingExercise>[
-                  TrainingExercise(
-                    exerciseId: 'Plank',
-                    mode: ExerciseMode.time,
-                    value: 45,
-                    restSeconds: 15,
-                  ),
-                  TrainingExercise(
-                    exerciseId: 'Bicycle crunches',
-                    mode: ExerciseMode.reps,
-                    value: 20,
-                    restSeconds: 15,
-                  ),
-                  TrainingExercise(
-                    exerciseId: 'Leg raises',
-                    mode: ExerciseMode.reps,
-                    value: 12,
-                    restSeconds: 15,
-                  ),
-                  TrainingExercise(
-                    exerciseId: 'Russian twists',
-                    mode: ExerciseMode.reps,
-                    value: 20,
-                    restSeconds: 15,
-                  ),
-                  TrainingExercise(
-                    exerciseId: 'Hollow body hold',
-                    mode: ExerciseMode.time,
-                    value: 30,
-                    restSeconds: 0,
-                  ),
-                ],
-              ),
-            ],
+          const HomeState(
+            plans: <TrainingPlan>[],
+            availableExerciseIds: <String>[],
+            schedulesByPlanId: <String, Map<String, dynamic>>{},
           ),
-        );
+        ) {
+    hydrate();
+  }
+
+  final TrainingPlanRepository _planRepository;
+  final ExerciseSelectionRepository _selectionRepository;
+  final ScheduleRepository _scheduleRepository;
+
+  Future<void> hydrate() async {
+    final List<TrainingPlan> plans = await _planRepository.load();
+    final List<String> selected = (await _selectionRepository.load()).toList(growable: false);
+    final List<Map<String, dynamic>> scheduleList = await _scheduleRepository.load();
+    final Map<String, Map<String, dynamic>> schedulesByPlanId = <String, Map<String, dynamic>>{};
+    for (final Map<String, dynamic> item in scheduleList) {
+      final String planId = item['planId'] as String? ?? '';
+      if (planId.isNotEmpty) {
+        schedulesByPlanId[planId] = item;
+      }
+    }
+    state = state.copyWith(
+      plans: plans,
+      availableExerciseIds: selected,
+      schedulesByPlanId: schedulesByPlanId,
+      isLoading: false,
+    );
+  }
+
+  Future<void> ensureFirstPlanForSelection(Set<String> selectedIds) async {
+    if (selectedIds.isEmpty) {
+      return;
+    }
+
+    await _selectionRepository.save(selectedIds);
+    final List<TrainingPlan> existing = await _planRepository.load();
+    if (existing.isNotEmpty) {
+      state = state.copyWith(
+        plans: existing,
+        availableExerciseIds: selectedIds.toList(growable: false),
+      );
+      return;
+    }
+
+    final TrainingPlan firstPlan = buildPlanFromExerciseIds(
+      id: 'plan-${DateTime.now().millisecondsSinceEpoch}',
+      name: 'My First Training',
+      exerciseIds: selectedIds.take(6).toList(growable: false),
+    );
+    final List<TrainingPlan> plans = <TrainingPlan>[firstPlan];
+    await _planRepository.save(plans);
+    state = state.copyWith(
+      plans: plans,
+      availableExerciseIds: selectedIds.toList(growable: false),
+    );
+  }
+
+  Future<void> createTraining({
+    required String name,
+    List<String>? exerciseIds,
+  }) async {
+    final List<String> source = (exerciseIds ?? state.availableExerciseIds)
+        .where((String item) => item.trim().isNotEmpty)
+        .toList(growable: false);
+    if (source.isEmpty) {
+      return;
+    }
+    final List<TrainingPlan> next = <TrainingPlan>[
+      ...state.plans,
+      buildPlanFromExerciseIds(
+        id: 'plan-${DateTime.now().millisecondsSinceEpoch}',
+        name: name.trim().isEmpty ? 'Custom Training' : name.trim(),
+        exerciseIds: source.take(8).toList(growable: false),
+      ),
+    ];
+    await _planRepository.save(next);
+    state = state.copyWith(plans: next);
+  }
+
+  Future<void> createTrainingFromSequence({
+    required String name,
+    required List<TrainingExercise> sequence,
+    int rounds = 1,
+    Map<String, dynamic>? schedule,
+  }) async {
+    if (sequence.isEmpty) {
+      return;
+    }
+    final int safeRounds = rounds < 1 ? 1 : rounds;
+    final List<TrainingExercise> expanded = <TrainingExercise>[];
+    for (int i = 0; i < safeRounds; i++) {
+      expanded.addAll(sequence);
+    }
+    final TrainingPlan plan = TrainingPlan(
+      id: 'plan-${DateTime.now().millisecondsSinceEpoch}',
+      name: name.trim().isEmpty ? 'Custom Training' : name.trim(),
+      items: expanded,
+    );
+    final List<TrainingPlan> next = <TrainingPlan>[...state.plans, plan];
+    await _planRepository.save(next);
+    Map<String, Map<String, dynamic>> nextSchedules = state.schedulesByPlanId;
+    if (schedule != null) {
+      nextSchedules = <String, Map<String, dynamic>>{
+        ...state.schedulesByPlanId,
+        plan.id: <String, dynamic>{...schedule, 'planId': plan.id},
+      };
+      await _scheduleRepository.save(nextSchedules.values.toList(growable: false));
+    }
+    state = state.copyWith(plans: next, schedulesByPlanId: nextSchedules);
+  }
+
+  Future<void> updateTrainingFromSequence({
+    required String planId,
+    required String name,
+    required List<TrainingExercise> sequence,
+    int rounds = 1,
+    Map<String, dynamic>? schedule,
+  }) async {
+    if (sequence.isEmpty) {
+      return;
+    }
+    final int safeRounds = rounds < 1 ? 1 : rounds;
+    final List<TrainingExercise> expanded = <TrainingExercise>[];
+    for (int i = 0; i < safeRounds; i++) {
+      expanded.addAll(sequence);
+    }
+    final int index = state.plans.indexWhere((TrainingPlan p) => p.id == planId);
+    if (index < 0) {
+      return;
+    }
+    final TrainingPlan updated = TrainingPlan(
+      id: planId,
+      name: name.trim().isEmpty ? state.plans[index].name : name.trim(),
+      items: expanded,
+    );
+    final List<TrainingPlan> nextPlans = <TrainingPlan>[...state.plans];
+    nextPlans[index] = updated;
+    await _planRepository.save(nextPlans);
+
+    final Map<String, Map<String, dynamic>> nextSchedules =
+        <String, Map<String, dynamic>>{...state.schedulesByPlanId};
+    if (schedule == null) {
+      nextSchedules.remove(planId);
+    } else {
+      nextSchedules[planId] = <String, dynamic>{...schedule, 'planId': planId};
+    }
+    await _scheduleRepository.save(nextSchedules.values.toList(growable: false));
+    state = state.copyWith(plans: nextPlans, schedulesByPlanId: nextSchedules);
+  }
+
+  Future<void> deleteTraining(String planId) async {
+    final List<TrainingPlan> nextPlans =
+        state.plans.where((TrainingPlan p) => p.id != planId).toList(growable: false);
+    await _planRepository.save(nextPlans);
+    final Map<String, Map<String, dynamic>> nextSchedules =
+        <String, Map<String, dynamic>>{...state.schedulesByPlanId}..remove(planId);
+    await _scheduleRepository.save(nextSchedules.values.toList(growable: false));
+    state = state.copyWith(plans: nextPlans, schedulesByPlanId: nextSchedules);
+  }
 }
 
 final homeControllerProvider = StateNotifierProvider<HomeController, HomeState>(
-  (ref) => HomeController(),
+  (ref) => HomeController(
+    ref.watch(trainingPlanRepositoryProvider),
+    ref.watch(exerciseSelectionRepositoryProvider),
+    ref.watch(scheduleRepositoryProvider),
+  ),
 );

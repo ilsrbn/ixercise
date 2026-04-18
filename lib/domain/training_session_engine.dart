@@ -1,25 +1,46 @@
 import 'package:ixercise/domain/models.dart';
 
 class TrainingSessionEngine {
-  TrainingSessionEngine(this.plan, {DateTime? startedAt})
-      : assert(plan.items.isNotEmpty, 'Training plan must have at least one item'),
+  TrainingSessionEngine(this._plan, {DateTime? startedAt})
+      : assert(_plan.items.isNotEmpty, 'Training plan must have at least one item'),
+        _startedAt = startedAt ?? DateTime.now(),
         state = SessionState(
-          planId: plan.id,
+          planId: _plan.id,
           currentIndex: 0,
           status: SessionStatus.running,
-          remainingSeconds: plan.items.first.mode == ExerciseMode.time
-              ? plan.items.first.value
+          remainingSeconds: _plan.items.first.mode == ExerciseMode.time
+              ? _plan.items.first.value
               : null,
           startedAt: startedAt ?? DateTime.now(),
           elapsedSeconds: 0,
         );
 
-  final TrainingPlan plan;
+  TrainingPlan _plan;
+  DateTime _startedAt;
   SessionState state;
+
+  TrainingPlan get plan => _plan;
+  set plan(TrainingPlan value) {
+    _plan = value;
+  }
 
   TrainingExercise get currentItem => plan.items[state.currentIndex];
 
   bool get isDone => state.status == SessionStatus.done;
+
+  void reset() {
+    _startedAt = DateTime.now();
+    state = SessionState(
+      planId: _plan.id,
+      currentIndex: 0,
+      status: SessionStatus.running,
+      remainingSeconds: _plan.items.first.mode == ExerciseMode.time
+          ? _plan.items.first.value
+          : null,
+      startedAt: _startedAt,
+      elapsedSeconds: 0,
+    );
+  }
 
   void tick({required int seconds}) {
     if (seconds <= 0 || state.status == SessionStatus.paused || isDone) {
@@ -81,11 +102,34 @@ class TrainingSessionEngine {
     _advanceToNextExercise();
   }
 
+  void adjustRestSeconds(int delta) {
+    if (delta == 0 || state.status != SessionStatus.resting || isDone) {
+      return;
+    }
+    final int current = state.remainingSeconds ?? 0;
+    final int next = (current + delta).clamp(0, 3600).toInt();
+    state = state.copyWith(remainingSeconds: next);
+    if (next == 0) {
+      _advanceToNextExercise();
+    }
+  }
+
   void pause() {
     if (isDone || state.status == SessionStatus.paused) {
       return;
     }
     state = state.copyWith(status: SessionStatus.paused);
+  }
+
+  void endSession() {
+    if (isDone) {
+      return;
+    }
+    state = state.copyWith(
+      status: SessionStatus.done,
+      currentIndex: state.currentIndex.clamp(0, plan.items.length - 1),
+      clearRemainingSeconds: true,
+    );
   }
 
   void resume() {
