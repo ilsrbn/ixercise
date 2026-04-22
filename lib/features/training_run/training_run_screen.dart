@@ -3,8 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ixercise/design_system/ix_animated_timer_text.dart';
-import 'package:ixercise/domain/models.dart';
 import 'package:ixercise/design_system/ix_progress_bar.dart';
+import 'package:ixercise/design_system/theme.dart';
+import 'package:ixercise/domain/models.dart';
+import 'package:ixercise/features/onboarding/exercise_catalog.dart';
+import 'package:ixercise/features/onboarding/exercise_group_icon.dart';
 import 'package:ixercise/features/session/session_controller.dart';
 
 class TrainingRunScreen extends ConsumerStatefulWidget {
@@ -51,6 +54,7 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen> {
     final SessionState session = state.session;
     final TrainingExercise item = state.currentItem;
     final bool isTime = item.mode == ExerciseMode.time;
+    final IxThemeColors colors = context.ixColors;
 
     if (session.status == SessionStatus.resting) {
       WidgetsBinding.instance.addPostFrameCallback(
@@ -68,7 +72,7 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen> {
     final int remaining = session.remainingSeconds ?? 0;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: colors.background,
       body: SafeArea(
         child: Column(
           children: <Widget>[
@@ -80,14 +84,17 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen> {
                   GestureDetector(
                     onTap: controller.endSession,
                     behavior: HitTestBehavior.opaque,
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
+                      ),
                       child: Text(
                         'END SESSION',
                         style: TextStyle(
                           fontSize: 11,
                           letterSpacing: 1.2,
-                          color: Color(0xFF9A9A9A),
+                          color: colors.softMute,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -96,10 +103,10 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen> {
                   const Spacer(),
                   Text(
                     '${index.toString().padLeft(2, '0')} / ${total.toString().padLeft(2, '0')}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       letterSpacing: 1,
-                      color: Color(0xFF0A0A0A),
+                      color: colors.ink,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -116,12 +123,12 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Text(
+                    Text(
                       'NOW',
                       style: TextStyle(
                         fontSize: 12,
                         letterSpacing: 1.2,
-                        color: Color(0xFF9A9A9A),
+                        color: colors.softMute,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -139,9 +146,13 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: <Widget>[
-                        const Padding(
-                          padding: EdgeInsets.only(bottom: 8),
-                          child: Icon(Icons.fitness_center_outlined, size: 58),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: ExerciseGroupIcon(
+                            group: groupForExerciseId(item.exerciseId),
+                            size: 62,
+                            color: colors.ink,
+                          ),
                         ),
                         const SizedBox(width: 16),
                         IxAnimatedTimerText(
@@ -160,10 +171,7 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen> {
                     const SizedBox(height: 8),
                     Text(
                       isTime ? 'Seconds remaining' : 'Reps to complete',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF6B6B6B),
-                      ),
+                      style: TextStyle(fontSize: 14, color: colors.mute),
                     ),
                     const Spacer(),
                     if (session.currentIndex + 1 < state.plan.items.length)
@@ -173,23 +181,32 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen> {
                           vertical: 12,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: colors.surface,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFE8E8E8)),
+                          border: Border.all(color: colors.line),
                         ),
                         child: Row(
                           children: <Widget>[
-                            const Text(
+                            Text(
                               'NEXT',
                               style: TextStyle(
                                 fontSize: 10,
                                 letterSpacing: 1.2,
-                                color: Color(0xFF9A9A9A),
+                                color: colors.softMute,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                             const SizedBox(width: 12),
-                            const Icon(Icons.fitness_center_outlined, size: 16),
+                            ExerciseGroupIcon(
+                              group: groupForExerciseId(
+                                state
+                                    .plan
+                                    .items[session.currentIndex + 1]
+                                    .exerciseId,
+                              ),
+                              size: 18,
+                              color: colors.ink,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -207,9 +224,9 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen> {
                                       ExerciseMode.time
                                   ? '${state.plan.items[session.currentIndex + 1].value}s'
                                   : '×${state.plan.items[session.currentIndex + 1].value}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
-                                color: Color(0xFF6B6B6B),
+                                color: colors.mute,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -230,7 +247,8 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen> {
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size.fromHeight(56),
                         shape: const StadiumBorder(),
-                        side: const BorderSide(color: Color(0xFFE8E8E8)),
+                        foregroundColor: colors.ink,
+                        side: BorderSide(color: colors.line),
                       ),
                       icon: Icon(
                         session.status == SessionStatus.paused
@@ -253,8 +271,8 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen> {
                         elevation: 0,
                         minimumSize: const Size.fromHeight(56),
                         shape: const StadiumBorder(),
-                        backgroundColor: const Color(0xFF0A0A0A),
-                        foregroundColor: Colors.white,
+                        backgroundColor: colors.ink,
+                        foregroundColor: colors.inverse,
                       ),
                       icon: const Icon(Icons.check),
                       label: Text(isTime ? 'Skip' : 'Done'),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ixercise/design_system/theme.dart';
 import 'package:ixercise/domain/models.dart';
 import 'package:ixercise/features/home/home_controller.dart';
+import 'package:ixercise/features/settings/feedback_settings_sheet.dart';
 
 class HomeOverviewScreen extends ConsumerWidget {
   const HomeOverviewScreen({
@@ -21,9 +23,10 @@ class HomeOverviewScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final homeState = ref.watch(homeControllerProvider);
     final List<TrainingPlan> todaysPlans = _plansScheduledToday(homeState);
+    final IxThemeColors colors = context.ixColors;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: colors.background,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
@@ -41,25 +44,27 @@ class HomeOverviewScreen extends ConsumerWidget {
                     ),
                   ),
                   const Spacer(),
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFE8E8E8)),
-                      color: Colors.white,
+                  IconButton(
+                    key: const Key('home_settings_button'),
+                    onPressed: () => _showSettings(context),
+                    style: IconButton.styleFrom(
+                      fixedSize: const Size(36, 36),
+                      backgroundColor: colors.surface,
+                      foregroundColor: colors.ink,
+                      side: BorderSide(color: colors.line),
                     ),
-                    child: const Icon(Icons.settings_outlined, size: 18),
+                    tooltip: 'Settings',
+                    icon: const Icon(Icons.settings_outlined, size: 18),
                   ),
                 ],
               ),
               const SizedBox(height: 14),
               Text(
                 _todayLabel(),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   letterSpacing: 1.1,
-                  color: Color(0xFF9A9A9A),
+                  color: colors.softMute,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -78,10 +83,10 @@ class HomeOverviewScreen extends ConsumerWidget {
                 children: <Widget>[
                   Text(
                     'YOUR TRAININGS · ${homeState.plans.length}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       letterSpacing: 1.2,
-                      color: Color(0xFF9A9A9A),
+                      color: colors.softMute,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -90,7 +95,7 @@ class HomeOverviewScreen extends ConsumerWidget {
                     key: const Key('home_new_training'),
                     onPressed: onCreateTraining,
                     style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF0A0A0A),
+                      foregroundColor: colors.ink,
                       shape: const StadiumBorder(),
                     ),
                     icon: const Icon(Icons.add, size: 16),
@@ -109,13 +114,13 @@ class HomeOverviewScreen extends ConsumerWidget {
                 child: homeState.isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : homeState.plans.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Text(
                           'No trainings yet.\nTap New to create your first one.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 16,
-                            color: Color(0xFF6B6B6B),
+                            color: colors.mute,
                             height: 1.4,
                           ),
                         ),
@@ -123,7 +128,7 @@ class HomeOverviewScreen extends ConsumerWidget {
                     : ListView.separated(
                         itemCount: homeState.plans.length,
                         separatorBuilder: (_, __) =>
-                            const Divider(height: 1, color: Color(0xFFE8E8E8)),
+                            Divider(height: 1, color: colors.line),
                         itemBuilder: (BuildContext context, int index) {
                           final TrainingPlan plan = homeState.plans[index];
                           return _SwipeActionRow(
@@ -149,9 +154,9 @@ class HomeOverviewScreen extends ConsumerWidget {
                                         const SizedBox(height: 4),
                                         Text(
                                           '${plan.items.length} exercises · ${_estimatedDuration(plan)} · ${_scheduleLabel(homeState.schedulesByPlanId[plan.id])}',
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 14,
-                                            color: Color(0xFF6B6B6B),
+                                            color: colors.mute,
                                           ),
                                         ),
                                       ],
@@ -165,10 +170,9 @@ class HomeOverviewScreen extends ConsumerWidget {
                                         onStartTraining?.call(plan),
                                     style: IconButton.styleFrom(
                                       fixedSize: const Size(40, 40),
-                                      backgroundColor: Colors.white,
-                                      side: const BorderSide(
-                                        color: Color(0xFFE8E8E8),
-                                      ),
+                                      backgroundColor: colors.surface,
+                                      foregroundColor: colors.ink,
+                                      side: BorderSide(color: colors.line),
                                     ),
                                     icon: const Icon(
                                       Icons.play_arrow_rounded,
@@ -186,6 +190,16 @@ class HomeOverviewScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showSettings(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      showDragHandle: false,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const FeedbackSettingsSheet(),
     );
   }
 
@@ -320,6 +334,7 @@ class _SwipeActionRowState extends State<_SwipeActionRow> {
 
   @override
   Widget build(BuildContext context) {
+    final IxThemeColors colors = context.ixColors;
     final double reveal = (-_drag / _maxReveal).clamp(0.0, 1.0);
     return SizedBox(
       height: 98,
@@ -345,7 +360,7 @@ class _SwipeActionRowState extends State<_SwipeActionRow> {
                 duration: const Duration(milliseconds: 220),
                 curve: Curves.easeOutCubic,
                 transform: Matrix4.translationValues(_drag, 0, 0),
-                color: const Color(0xFFFAFAFA),
+                color: colors.background,
                 child: widget.child,
               ),
             ),
@@ -366,7 +381,7 @@ class _SwipeActionRowState extends State<_SwipeActionRow> {
                       children: <Widget>[
                         _ActionIcon(
                           icon: Icons.edit_outlined,
-                          color: const Color(0xFF0A0A0A),
+                          color: colors.ink,
                           onTap: () {
                             widget.onEdit?.call();
                             setState(() => _drag = 0);
@@ -407,6 +422,7 @@ class _ActionIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final IxThemeColors colors = context.ixColors;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -414,9 +430,9 @@ class _ActionIcon extends StatelessWidget {
         width: 52,
         height: 52,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE8E8E8)),
+          border: Border.all(color: colors.line),
         ),
         child: Icon(icon, size: 18, color: color),
       ),

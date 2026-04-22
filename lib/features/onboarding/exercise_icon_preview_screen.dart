@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ixercise/design_system/theme.dart';
 import 'package:ixercise/features/onboarding/exercise_group_icon.dart';
 
 class ExerciseIconPreviewScreen extends StatelessWidget {
@@ -6,12 +7,13 @@ class ExerciseIconPreviewScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final IxThemeColors colors = context.ixColors;
     final List<String> groups = supportedExerciseIconGroups.toList(
       growable: false,
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: colors.background,
       body: SafeArea(
         child: GridView.builder(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
@@ -40,7 +42,8 @@ class _PreviewTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Align(
+    final IxThemeColors colors = context.ixColors;
+    return Align(
       alignment: Alignment.centerLeft,
       child: Text(
         'Muscle\nicons.',
@@ -48,7 +51,7 @@ class _PreviewTitle extends StatelessWidget {
           fontSize: 34,
           height: 0.95,
           fontWeight: FontWeight.w700,
-          letterSpacing: -0.8,
+          color: colors.ink,
         ),
       ),
     );
@@ -62,34 +65,35 @@ class _IconPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final IxThemeColors colors = context.ixColors;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8E8E8)),
+        border: Border.all(color: colors.line),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          ExerciseGroupIcon(
-            group: group,
-            size: 86,
-            color: const Color(0xFF0A0A0A),
-          ),
+          ExerciseGroupIcon(group: group, size: 86, color: colors.ink),
           const Spacer(),
           Text(
             group,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: colors.ink,
+            ),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'ICON PREVIEW',
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w600,
               letterSpacing: 1.1,
-              color: Color(0xFF9A9A9A),
+              color: colors.softMute,
             ),
           ),
         ],

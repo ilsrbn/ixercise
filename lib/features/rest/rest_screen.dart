@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ixercise/design_system/ix_animated_timer_text.dart';
 import 'package:ixercise/domain/models.dart';
 import 'package:ixercise/design_system/ix_progress_bar.dart';
+import 'package:ixercise/features/onboarding/exercise_catalog.dart';
+import 'package:ixercise/features/onboarding/exercise_group_icon.dart';
 import 'package:ixercise/features/session/session_controller.dart';
 
 class RestScreen extends ConsumerStatefulWidget {
@@ -181,8 +183,9 @@ class _RestScreenState extends ConsumerState<RestScreen> {
                         color: const Color(0x14FFFFFF),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(
-                        Icons.fitness_center_outlined,
+                      child: ExerciseGroupIcon(
+                        group: groupForExerciseId(next.exerciseId),
+                        size: 30,
                         color: Colors.white,
                       ),
                     ),

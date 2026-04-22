@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ixercise/design_system/theme.dart';
 import 'package:ixercise/features/session/session_controller.dart';
 
 class DoneScreen extends ConsumerWidget {
-  const DoneScreen({
-    super.key,
-    required this.sessionId,
-    this.onBackHome,
-  });
+  const DoneScreen({super.key, required this.sessionId, this.onBackHome});
 
   final String sessionId;
   final VoidCallback? onBackHome;
@@ -15,9 +12,10 @@ class DoneScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(sessionControllerProvider);
+    final IxThemeColors colors = context.ixColors;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: colors.background,
       body: SafeArea(
         child: Column(
           children: <Widget>[
@@ -56,12 +54,12 @@ class DoneScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'TOTAL TIME',
                       style: TextStyle(
                         fontSize: 13,
                         letterSpacing: 1.2,
-                        color: Color(0xFF9A9A9A),
+                        color: colors.softMute,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -79,8 +77,8 @@ class DoneScreen extends ConsumerWidget {
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size.fromHeight(56),
                     elevation: 0,
-                    backgroundColor: const Color(0xFF0A0A0A),
-                    foregroundColor: Colors.white,
+                    backgroundColor: colors.ink,
+                    foregroundColor: colors.inverse,
                     shape: const StadiumBorder(),
                   ),
                   child: const Text('Back home'),

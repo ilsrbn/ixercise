@@ -1,20 +1,73 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ixercise/data/local_store.dart';
+import 'package:ixercise/domain/models.dart';
+import 'package:ixercise/features/notifications/training_reminder_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:ixercise/app/shell.dart';
 
 void main() {
-  testWidgets('app boots into onboarding route', (WidgetTester tester) async {
-    await tester.pumpWidget(ProviderScope(child: IxerciseApp()));
+  setUp(() {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+  });
+
+  testWidgets('app boots into onboarding when no trainings are saved', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(_app());
     await tester.pumpAndSettle();
 
     expect(find.text('Set up your\ntraining flow.'), findsOneWidget);
   });
+
+  testWidgets('app boots into home when trainings are saved', (
+    WidgetTester tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      kTrainingPlansKey: jsonEncode(<Map<String, dynamic>>[
+        <String, dynamic>{
+          'id': 'saved-plan',
+          'name': 'Saved Training',
+          'items': <Map<String, dynamic>>[
+            <String, dynamic>{
+              'exerciseId': 'pushups',
+              'mode': 'reps',
+              'value': 10,
+              'restSeconds': 30,
+            },
+          ],
+        },
+      ]),
+    });
+
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Saved Training'), findsOneWidget);
+    expect(find.text('Set up your\ntraining flow.'), findsNothing);
+  });
+}
+
+ProviderScope _app() {
+  return ProviderScope(
+    overrides: <Override>[
+      trainingReminderServiceProvider.overrideWithValue(
+        const _FakeTrainingReminderCoordinator(),
+      ),
+    ],
+    child: IxerciseApp(),
+  );
+}
+
+class _FakeTrainingReminderCoordinator implements TrainingReminderCoordinator {
+  const _FakeTrainingReminderCoordinator();
+
+  @override
+  Future<void> syncAll({
+    required List<TrainingPlan> plans,
+    required Map<String, Map<String, dynamic>> schedulesByPlanId,
+  }) async {}
 }

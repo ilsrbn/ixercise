@@ -14,8 +14,25 @@ import 'package:ixercise/features/training_run/training_run_screen.dart';
 
 GoRouter buildRouter() {
   return GoRouter(
-    initialLocation: '/onboarding',
+    initialLocation: '/',
     routes: <RouteBase>[
+      GoRoute(
+        path: '/',
+        builder: (context, _) => Consumer(
+          builder: (BuildContext context, WidgetRef ref, _) {
+            final HomeState home = ref.watch(homeControllerProvider);
+            if (!home.isLoading) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!context.mounted) {
+                  return;
+                }
+                context.go(home.plans.isEmpty ? '/onboarding' : '/home');
+              });
+            }
+            return const Scaffold(body: SizedBox.shrink());
+          },
+        ),
+      ),
       GoRoute(
         path: '/onboarding',
         builder: (context, _) => OnboardingTrainingSetupScreen(

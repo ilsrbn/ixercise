@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ixercise/design_system/ix_button.dart';
-import 'package:ixercise/features/onboarding/onboarding_controller.dart';
+import 'package:ixercise/design_system/theme.dart';
 import 'package:ixercise/features/onboarding/exercise_group_icon.dart';
+import 'package:ixercise/features/onboarding/onboarding_controller.dart';
 
 class OnboardingScreen extends ConsumerWidget {
   const OnboardingScreen({super.key, this.onContinue});
@@ -15,9 +16,10 @@ class OnboardingScreen extends ConsumerWidget {
     final OnboardingController controller = ref.read(
       onboardingControllerProvider.notifier,
     );
+    final IxThemeColors colors = context.ixColors;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: colors.background,
       body: SafeArea(
         child: Stack(
           children: <Widget>[
@@ -35,9 +37,7 @@ class OnboardingScreen extends ConsumerWidget {
                         margin: EdgeInsets.only(right: i == 1 ? 0 : 6),
                         height: 3,
                         decoration: BoxDecoration(
-                          color: i == 0
-                              ? const Color(0xFF0A0A0A)
-                              : const Color(0xFFE8E8E8),
+                          color: i == 0 ? colors.ink : colors.line,
                           borderRadius: BorderRadius.circular(3),
                         ),
                       ),
@@ -45,32 +45,32 @@ class OnboardingScreen extends ConsumerWidget {
                   }),
                 ),
                 const SizedBox(height: 24),
-                const Text(
+                Text(
                   'STEP 1 OF 2',
                   style: TextStyle(
                     fontSize: 11,
                     letterSpacing: 1.2,
-                    color: Color(0xFF9A9A9A),
+                    color: colors.softMute,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Pick exercises\nyou actually do.',
                   style: TextStyle(
                     fontSize: 42,
                     letterSpacing: -1.2,
                     height: 1.0,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0A0A0A),
+                    color: colors.ink,
                   ),
                 ),
                 const SizedBox(height: 10),
-                const Text(
+                Text(
                   'Build your personal library. You can always add more later.',
                   style: TextStyle(
                     fontSize: 15,
-                    color: Color(0xFF6B6B6B),
+                    color: colors.mute,
                     height: 1.35,
                   ),
                 ),
@@ -80,17 +80,21 @@ class OnboardingScreen extends ConsumerWidget {
                   onChanged: controller.setQuery,
                   decoration: InputDecoration(
                     hintText: 'Search exercises',
-                    hintStyle: const TextStyle(color: Color(0xFF9A9A9A)),
-                    prefixIcon: const Icon(Icons.search, size: 18),
+                    hintStyle: TextStyle(color: colors.softMute),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      size: 18,
+                      color: colors.mute,
+                    ),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: colors.surface,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
+                      borderSide: BorderSide(color: colors.line),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
+                      borderSide: BorderSide(color: colors.line),
                     ),
                     contentPadding: const EdgeInsets.symmetric(vertical: 12),
                   ),
@@ -109,15 +113,11 @@ class OnboardingScreen extends ConsumerWidget {
                         onPressed: () => controller.setGroup(group),
                         style: OutlinedButton.styleFrom(
                           backgroundColor: active
-                              ? const Color(0xFF0A0A0A)
+                              ? colors.ink
                               : Colors.transparent,
-                          foregroundColor: active
-                              ? Colors.white
-                              : const Color(0xFF0A0A0A),
+                          foregroundColor: active ? colors.inverse : colors.ink,
                           side: BorderSide(
-                            color: active
-                                ? const Color(0xFF0A0A0A)
-                                : const Color(0xFFE8E8E8),
+                            color: active ? colors.ink : colors.line,
                           ),
                           shape: const StadiumBorder(),
                         ),
@@ -150,13 +150,9 @@ class OnboardingScreen extends ConsumerWidget {
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(18),
-                          color: selected
-                              ? const Color(0xFF0A0A0A)
-                              : Colors.white,
+                          color: selected ? colors.ink : colors.surface,
                           border: Border.all(
-                            color: selected
-                                ? const Color(0xFF0A0A0A)
-                                : const Color(0xFFE8E8E8),
+                            color: selected ? colors.ink : colors.line,
                           ),
                         ),
                         child: Stack(
@@ -167,9 +163,7 @@ class OnboardingScreen extends ConsumerWidget {
                                 ExerciseGroupIcon(
                                   group: exercise.group,
                                   size: 38,
-                                  color: selected
-                                      ? Colors.white
-                                      : const Color(0xFF0A0A0A),
+                                  color: selected ? colors.inverse : colors.ink,
                                 ),
                                 const Spacer(),
                                 Text(
@@ -178,8 +172,8 @@ class OnboardingScreen extends ConsumerWidget {
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                     color: selected
-                                        ? Colors.white
-                                        : const Color(0xFF0A0A0A),
+                                        ? colors.inverse
+                                        : colors.ink,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -188,8 +182,8 @@ class OnboardingScreen extends ConsumerWidget {
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: selected
-                                        ? Colors.white.withOpacity(0.55)
-                                        : const Color(0xFF9A9A9A),
+                                        ? colors.inverse.withValues(alpha: 0.55)
+                                        : colors.softMute,
                                   ),
                                 ),
                               ],
@@ -226,12 +220,15 @@ class OnboardingScreen extends ConsumerWidget {
               bottom: 0,
               child: Container(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: <Color>[Color(0x00FAFAFA), Color(0xFFFAFAFA)],
-                    stops: <double>[0, 0.35],
+                    colors: <Color>[
+                      colors.background.withValues(alpha: 0),
+                      colors.background,
+                    ],
+                    stops: const <double>[0, 0.35],
                   ),
                 ),
                 child: Row(
@@ -240,16 +237,16 @@ class OnboardingScreen extends ConsumerWidget {
                       child: Text.rich(
                         TextSpan(
                           text: '${state.selectedExerciseIds.length}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
-                            color: Color(0xFF0A0A0A),
+                            color: colors.ink,
                             fontWeight: FontWeight.w700,
                           ),
-                          children: const <InlineSpan>[
+                          children: <InlineSpan>[
                             TextSpan(
                               text: ' selected',
                               style: TextStyle(
-                                color: Color(0xFF6B6B6B),
+                                color: colors.mute,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),

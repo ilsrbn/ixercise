@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ixercise/design_system/ix_button.dart';
-import 'package:ixercise/design_system/tokens.dart';
+import 'package:ixercise/design_system/theme.dart';
 import 'package:ixercise/domain/models.dart';
 import 'package:ixercise/domain/training_set_expander.dart';
 import 'package:ixercise/features/home/home_controller.dart';
@@ -88,8 +88,9 @@ class _OnboardingTrainingSetupScreenState
   Widget build(BuildContext context) {
     final OnboardingState onboarding = ref.watch(onboardingControllerProvider);
     final List<_ExerciseOpt> allExercises = onboarding.exercises
-        .map((_e) => _ExerciseOpt(_e.id, _e.name))
+        .map((exercise) => _ExerciseOpt(exercise.id, exercise.name))
         .toList(growable: false);
+    final IxThemeColors colors = context.ixColors;
     if (!_seededFromSelection && _items.isEmpty && allExercises.isNotEmpty) {
       _seededFromSelection = true;
       _items
@@ -106,39 +107,29 @@ class _OnboardingTrainingSetupScreenState
     }
 
     return Scaffold(
-      backgroundColor: IxColors.bg,
+      backgroundColor: colors.background,
       body: SafeArea(
         child: Stack(
           children: <Widget>[
             ListView(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 140),
               children: <Widget>[
-                const Text(
-                  'STEP 2 OF 2',
-                  style: TextStyle(
-                    fontSize: 11,
-                    letterSpacing: 1.2,
-                    color: Color(0xFF9A9A9A),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Set up your\ntraining flow.',
                   style: TextStyle(
                     fontSize: 42,
                     letterSpacing: -1.2,
                     height: 1.0,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0A0A0A),
+                    color: colors.ink,
                   ),
                 ),
                 const SizedBox(height: 10),
-                const Text(
+                Text(
                   'Order exercises, choose reps or timer, and set rest between items.',
                   style: TextStyle(
                     fontSize: 15,
-                    color: Color(0xFF6B6B6B),
+                    color: colors.mute,
                     height: 1.35,
                   ),
                 ),
@@ -148,16 +139,16 @@ class _OnboardingTrainingSetupScreenState
                   controller: _nameController,
                   decoration: InputDecoration(
                     hintText: 'Training name',
-                    hintStyle: const TextStyle(color: Color(0xFF9A9A9A)),
+                    hintStyle: TextStyle(color: colors.softMute),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: colors.surface,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: IxColors.line),
+                      borderSide: BorderSide(color: colors.line),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: IxColors.line),
+                      borderSide: BorderSide(color: colors.line),
                     ),
                   ),
                 ),
@@ -270,8 +261,8 @@ class _OnboardingTrainingSetupScreenState
                           );
                         },
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: IxColors.ink,
-                    side: const BorderSide(color: IxColors.line),
+                    foregroundColor: colors.ink,
+                    side: BorderSide(color: colors.line),
                     shape: const StadiumBorder(),
                     minimumSize: const Size.fromHeight(52),
                   ),
@@ -286,12 +277,15 @@ class _OnboardingTrainingSetupScreenState
               bottom: 0,
               child: Container(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: <Color>[Color(0x00FAFAFA), Color(0xFFFAFAFA)],
-                    stops: <double>[0, 0.35],
+                    colors: <Color>[
+                      colors.background.withValues(alpha: 0),
+                      colors.background,
+                    ],
+                    stops: const <double>[0, 0.35],
                   ),
                 ),
                 child: Row(
@@ -335,6 +329,7 @@ class _OnboardingTrainingSetupScreenState
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
+            final IxThemeColors colors = context.ixColors;
             final List<_ExerciseOpt> filtered = available
                 .where((e) => group == 'All' || groupFor(e) == group)
                 .where(
@@ -347,9 +342,11 @@ class _OnboardingTrainingSetupScreenState
             }.toList(growable: false);
             return Container(
               height: MediaQuery.of(context).size.height * 0.86,
-              decoration: const BoxDecoration(
-                color: IxColors.bg,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+              decoration: BoxDecoration(
+                color: colors.background,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(22),
+                ),
               ),
               child: Column(
                 children: <Widget>[
@@ -358,14 +355,18 @@ class _OnboardingTrainingSetupScreenState
                     width: 42,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFCDCDCD),
+                      color: colors.line,
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
                   const SizedBox(height: 14),
-                  const Text(
+                  Text(
                     'Pick exercise',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: colors.ink,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Padding(
@@ -375,17 +376,21 @@ class _OnboardingTrainingSetupScreenState
                           setModalState(() => query = v.trim().toLowerCase()),
                       decoration: InputDecoration(
                         hintText: 'Search exercises',
-                        hintStyle: const TextStyle(color: Color(0xFF9A9A9A)),
-                        prefixIcon: const Icon(Icons.search, size: 18),
+                        hintStyle: TextStyle(color: colors.softMute),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          size: 18,
+                          color: colors.mute,
+                        ),
                         filled: true,
-                        fillColor: Colors.white,
+                        fillColor: colors.surface,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: IxColors.line),
+                          borderSide: BorderSide(color: colors.line),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: IxColors.line),
+                          borderSide: BorderSide(color: colors.line),
                         ),
                       ),
                     ),
@@ -405,13 +410,13 @@ class _OnboardingTrainingSetupScreenState
                           onPressed: () => setModalState(() => group = g),
                           style: OutlinedButton.styleFrom(
                             backgroundColor: active
-                                ? IxColors.ink
+                                ? colors.ink
                                 : Colors.transparent,
                             foregroundColor: active
-                                ? Colors.white
-                                : IxColors.ink,
+                                ? colors.inverse
+                                : colors.ink,
                             side: BorderSide(
-                              color: active ? IxColors.ink : IxColors.line,
+                              color: active ? colors.ink : colors.line,
                             ),
                             shape: const StadiumBorder(),
                           ),
@@ -443,13 +448,9 @@ class _OnboardingTrainingSetupScreenState
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(18),
-                              color: active
-                                  ? const Color(0xFF0A0A0A)
-                                  : Colors.white,
+                              color: active ? colors.ink : colors.surface,
                               border: Border.all(
-                                color: active
-                                    ? const Color(0xFF0A0A0A)
-                                    : const Color(0xFFE8E8E8),
+                                color: active ? colors.ink : colors.line,
                               ),
                             ),
                             child: Stack(
@@ -461,8 +462,8 @@ class _OnboardingTrainingSetupScreenState
                                       group: exerciseGroup,
                                       size: 36,
                                       color: active
-                                          ? Colors.white
-                                          : const Color(0xFF0A0A0A),
+                                          ? colors.inverse
+                                          : colors.ink,
                                     ),
                                     const Spacer(),
                                     Text(
@@ -473,8 +474,8 @@ class _OnboardingTrainingSetupScreenState
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
                                         color: active
-                                            ? Colors.white
-                                            : const Color(0xFF0A0A0A),
+                                            ? colors.inverse
+                                            : colors.ink,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
@@ -483,8 +484,10 @@ class _OnboardingTrainingSetupScreenState
                                       style: TextStyle(
                                         fontSize: 10,
                                         color: active
-                                            ? Colors.white.withOpacity(0.55)
-                                            : const Color(0xFF9A9A9A),
+                                            ? colors.inverse.withValues(
+                                                alpha: 0.55,
+                                              )
+                                            : colors.softMute,
                                       ),
                                     ),
                                   ],
@@ -496,8 +499,8 @@ class _OnboardingTrainingSetupScreenState
                                     child: Container(
                                       width: 22,
                                       height: 22,
-                                      decoration: const BoxDecoration(
-                                        color: IxColors.accent,
+                                      decoration: BoxDecoration(
+                                        color: colors.accent,
                                         shape: BoxShape.circle,
                                       ),
                                       child: const Icon(
@@ -541,11 +544,14 @@ class _OnboardingTrainingSetupScreenState
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
+            final IxThemeColors colors = context.ixColors;
             return Container(
               height: 320,
-              decoration: const BoxDecoration(
-                color: IxColors.bg,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+              decoration: BoxDecoration(
+                color: colors.background,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(22),
+                ),
               ),
               child: Column(
                 children: <Widget>[
@@ -554,16 +560,17 @@ class _OnboardingTrainingSetupScreenState
                     width: 42,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFCDCDCD),
+                      color: colors.line,
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
                   const SizedBox(height: 14),
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
+                      color: colors.ink,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -646,11 +653,14 @@ class _OnboardingTrainingSetupScreenState
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
+            final IxThemeColors colors = context.ixColors;
             return Container(
               height: 320,
-              decoration: const BoxDecoration(
-                color: IxColors.bg,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+              decoration: BoxDecoration(
+                color: colors.background,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(22),
+                ),
               ),
               child: Column(
                 children: <Widget>[
@@ -659,16 +669,17 @@ class _OnboardingTrainingSetupScreenState
                     width: 42,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFCDCDCD),
+                      color: colors.line,
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
                   const SizedBox(height: 14),
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
+                      color: colors.ink,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -809,6 +820,8 @@ class _OnboardingTrainingSetupScreenState
       schedule = <String, dynamic>{
         'type': 'alternating',
         'time': _scheduleTime,
+        'anchorDate':
+            widget.initialSchedule?['anchorDate'] as String? ?? _todayIsoDate(),
       };
     }
     if (widget.initialPlan == null) {
@@ -830,6 +843,13 @@ class _OnboardingTrainingSetupScreenState
           );
     }
     widget.onSaved?.call();
+  }
+
+  String _todayIsoDate() {
+    final DateTime now = DateTime.now();
+    return '${now.year.toString().padLeft(4, '0')}-'
+        '${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
   }
 }
 
@@ -860,12 +880,13 @@ class _ScheduleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final IxThemeColors colors = context.ixColors;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE8E8E8)),
+        border: Border.all(color: colors.line),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -955,11 +976,11 @@ class _ScheduleCard extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFE8E8E8)),
+                  border: Border.all(color: colors.line),
                 ),
                 child: Row(
                   children: <Widget>[
-                    const Text('Time', style: TextStyle(color: IxColors.mute)),
+                    Text('Time', style: TextStyle(color: colors.mute)),
                     const Spacer(),
                     Text(
                       time,
@@ -991,6 +1012,7 @@ class _SchedulePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final IxThemeColors colors = context.ixColors;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
@@ -998,13 +1020,13 @@ class _SchedulePill extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(999),
-          color: active ? IxColors.ink : Colors.white,
-          border: Border.all(color: active ? IxColors.ink : IxColors.line),
+          color: active ? colors.ink : colors.surface,
+          border: Border.all(color: active ? colors.ink : colors.line),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: active ? Colors.white : IxColors.ink,
+            color: active ? colors.inverse : colors.ink,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -1028,6 +1050,7 @@ class _WeekdayChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final IxThemeColors colors = context.ixColors;
     return InkWell(
       onTap: () => onTap(day),
       borderRadius: BorderRadius.circular(999),
@@ -1035,15 +1058,13 @@ class _WeekdayChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(999),
-          color: active ? const Color(0xFFE11D2E) : Colors.white,
-          border: Border.all(
-            color: active ? const Color(0xFFE11D2E) : const Color(0xFFE8E8E8),
-          ),
+          color: active ? colors.accent : colors.surface,
+          border: Border.all(color: active ? colors.accent : colors.line),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: active ? Colors.white : IxColors.ink,
+            color: active ? colors.inverse : colors.ink,
             fontWeight: FontWeight.w600,
             fontSize: 12,
           ),
@@ -1076,13 +1097,14 @@ class _ExerciseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final IxThemeColors colors = context.ixColors;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE8E8E8)),
+        border: Border.all(color: colors.line),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1118,7 +1140,7 @@ class _ExerciseCard extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFFE8E8E8)),
+              border: Border.all(color: colors.line),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -1185,6 +1207,7 @@ class _ModePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final IxThemeColors colors = context.ixColors;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
@@ -1192,12 +1215,12 @@ class _ModePill extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(999),
-          color: active ? IxColors.ink : Colors.white,
+          color: active ? colors.ink : colors.surface,
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: active ? Colors.white : IxColors.ink,
+            color: active ? colors.inverse : colors.ink,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -1219,6 +1242,7 @@ class _DurationChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final IxThemeColors colors = context.ixColors;
     final int m = seconds ~/ 60;
     final int s = seconds % 60;
     final String text =
@@ -1230,7 +1254,7 @@ class _DurationChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE8E8E8)),
+          border: Border.all(color: colors.line),
         ),
         child: Row(
           children: <Widget>[
@@ -1246,7 +1270,7 @@ class _DurationChip extends StatelessWidget {
                   ),
                   Text(
                     label,
-                    style: const TextStyle(fontSize: 11, color: IxColors.mute),
+                    style: TextStyle(fontSize: 11, color: colors.mute),
                   ),
                 ],
               ),
@@ -1274,11 +1298,12 @@ class _StepperPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final IxThemeColors colors = context.ixColors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE8E8E8)),
+        border: Border.all(color: colors.line),
       ),
       child: Row(
         children: <Widget>[
@@ -1296,13 +1321,7 @@ class _StepperPill extends StatelessWidget {
                     fontSize: 16,
                   ),
                 ),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF6B6B6B),
-                  ),
-                ),
+                Text(label, style: TextStyle(fontSize: 11, color: colors.mute)),
               ],
             ),
           ),
@@ -1321,6 +1340,7 @@ class _MiniAdjust extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final IxThemeColors colors = context.ixColors;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
@@ -1330,16 +1350,12 @@ class _MiniAdjust extends StatelessWidget {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(999),
-          color: onTap == null
-              ? const Color(0xFFF0F0F0)
-              : const Color(0xFFF7F7F7),
+          color: onTap == null ? colors.line : colors.elevatedSurface,
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: onTap == null
-                ? const Color(0xFFB0B0B0)
-                : const Color(0xFF0A0A0A),
+            color: onTap == null ? colors.softMute : colors.ink,
             fontWeight: FontWeight.w700,
             fontSize: 16,
           ),

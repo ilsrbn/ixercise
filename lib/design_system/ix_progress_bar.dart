@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:ixercise/design_system/theme.dart';
 import 'package:ixercise/design_system/tokens.dart';
 
 class IxProgressBar extends StatelessWidget {
-  const IxProgressBar({
-    required this.value,
-    this.height = 8,
-    super.key,
-  });
+  const IxProgressBar({required this.value, this.height = 8, super.key});
 
   final double value;
   final double height;
@@ -14,11 +11,12 @@ class IxProgressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double safeValue = value.clamp(0, 1);
+    final colors = context.ixColors;
 
     return Container(
       height: height,
       decoration: BoxDecoration(
-        color: IxColors.line,
+        color: colors.line,
         borderRadius: IxRadius.pill,
       ),
       child: LayoutBuilder(
@@ -27,8 +25,8 @@ class IxProgressBar extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Container(
               width: constraints.maxWidth * safeValue,
-              decoration: const BoxDecoration(
-                color: IxColors.accent,
+              decoration: BoxDecoration(
+                color: colors.accent,
                 borderRadius: IxRadius.pill,
               ),
             ),

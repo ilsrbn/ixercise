@@ -8,6 +8,8 @@ const String kSchemaVersionKey = 'ixercise_schema_version';
 const String kSelectedExercisesKey = 'ixercise_selected_exercises';
 const String kTrainingPlansKey = 'ixercise_training_plans';
 const String kSchedulesKey = 'ixercise_schedules';
+const String kFeedbackSettingsKey = 'ixercise_feedback_settings';
+const String kTrainingReminderIdsKey = 'ixercise_training_reminder_ids';
 
 class LocalStore {
   const LocalStore();
@@ -97,6 +99,54 @@ class LocalStore {
     await writeSchemaVersion();
     await prefs.setString(kSchedulesKey, jsonEncode(schedules));
   }
+
+  Future<Map<String, dynamic>> loadFeedbackSettings() async {
+    final prefs = await _prefs();
+    final raw = prefs.getString(kFeedbackSettingsKey);
+    if (raw == null || raw.isEmpty) {
+      return <String, dynamic>{};
+    }
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+      return <String, dynamic>{};
+    } catch (_) {
+      return <String, dynamic>{};
+    }
+  }
+
+  Future<void> saveFeedbackSettings(Map<String, dynamic> settings) async {
+    final prefs = await _prefs();
+    await writeSchemaVersion();
+    await prefs.setString(kFeedbackSettingsKey, jsonEncode(settings));
+  }
+
+  Future<List<int>> loadTrainingReminderIds() async {
+    final prefs = await _prefs();
+    final raw = prefs.getString(kTrainingReminderIdsKey);
+    if (raw == null || raw.isEmpty) {
+      return <int>[];
+    }
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) {
+        return <int>[];
+      }
+      return decoded.whereType<int>().toList(growable: false);
+    } catch (_) {
+      return <int>[];
+    }
+  }
+
+  Future<void> saveTrainingReminderIds(List<int> ids) async {
+    final prefs = await _prefs();
+    await writeSchemaVersion();
+    await prefs.setString(kTrainingReminderIdsKey, jsonEncode(ids));
+  }
 }
 
 Map<String, dynamic> _trainingPlanToJson(TrainingPlan plan) {
@@ -117,19 +167,24 @@ Map<String, dynamic> _trainingPlanToJson(TrainingPlan plan) {
 }
 
 TrainingPlan _trainingPlanFromJson(Map<String, dynamic> json) {
-  final List<dynamic> rawItems = (json['items'] as List<dynamic>? ?? <dynamic>[]);
-  final items = rawItems.whereType<Map<String, dynamic>>().map((raw) {
-    final String modeRaw = raw['mode'] as String? ?? 'time';
-    final ExerciseMode mode =
-        modeRaw == ExerciseMode.reps.name ? ExerciseMode.reps : ExerciseMode.time;
+  final List<dynamic> rawItems =
+      (json['items'] as List<dynamic>? ?? <dynamic>[]);
+  final items = rawItems
+      .whereType<Map<String, dynamic>>()
+      .map((raw) {
+        final String modeRaw = raw['mode'] as String? ?? 'time';
+        final ExerciseMode mode = modeRaw == ExerciseMode.reps.name
+            ? ExerciseMode.reps
+            : ExerciseMode.time;
 
-    return TrainingExercise(
-      exerciseId: raw['exerciseId'] as String? ?? '',
-      mode: mode,
-      value: raw['value'] as int? ?? 1,
-      restSeconds: raw['restSeconds'] as int? ?? 0,
-    );
-  }).toList(growable: false);
+        return TrainingExercise(
+          exerciseId: raw['exerciseId'] as String? ?? '',
+          mode: mode,
+          value: raw['value'] as int? ?? 1,
+          restSeconds: raw['restSeconds'] as int? ?? 0,
+        );
+      })
+      .toList(growable: false);
 
   return TrainingPlan(
     id: json['id'] as String? ?? '',

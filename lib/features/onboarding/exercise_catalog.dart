@@ -207,3 +207,14 @@ String groupForExerciseName(String name) {
   }
   return 'Other';
 }
+
+String groupForExerciseId(String exerciseId) {
+  final String normalized = exerciseId.trim().toLowerCase();
+  for (final ExerciseSeed seed in buildExerciseCatalog()) {
+    if (seed.id.toLowerCase() == normalized ||
+        seed.name.toLowerCase() == normalized) {
+      return seed.group;
+    }
+  }
+  return groupForExerciseName(exerciseId);
+}
