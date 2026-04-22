@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ixercise/domain/models.dart';
 import 'package:ixercise/domain/training_session_engine.dart';
+import 'package:ixercise/domain/training_set_expander.dart';
 
 void main() {
   test('timed exercise completes into rest when restSeconds > 0', () {
@@ -13,6 +14,12 @@ void main() {
           mode: ExerciseMode.time,
           value: 10,
           restSeconds: 15,
+        ),
+        TrainingExercise(
+          exerciseId: 'squat',
+          mode: ExerciseMode.reps,
+          value: 12,
+          restSeconds: 0,
         ),
       ],
     );
@@ -75,4 +82,106 @@ void main() {
     engine.completeCurrentReps();
     expect(engine.state.status, SessionStatus.done);
   });
+
+  test(
+    'interleaved multi-set plan advances in saved order and skips final rest',
+    () {
+      const items = <TrainingExercise>[
+        TrainingExercise(
+          exerciseId: 'A',
+          mode: ExerciseMode.reps,
+          value: 10,
+          restSeconds: 20,
+        ),
+        TrainingExercise(
+          exerciseId: 'B',
+          mode: ExerciseMode.reps,
+          value: 12,
+          restSeconds: 20,
+        ),
+        TrainingExercise(
+          exerciseId: 'A',
+          mode: ExerciseMode.reps,
+          value: 10,
+          restSeconds: 20,
+        ),
+        TrainingExercise(
+          exerciseId: 'B',
+          mode: ExerciseMode.reps,
+          value: 12,
+          restSeconds: 20,
+        ),
+      ];
+      final engine = TrainingSessionEngine(
+        const TrainingPlan(id: 'p4', name: 'Sets', items: items),
+      );
+      final visited = <String>[];
+
+      for (int i = 0; i < items.length; i++) {
+        visited.add(engine.currentItem.exerciseId);
+        engine.completeCurrentReps();
+        if (i < items.length - 1) {
+          expect(engine.state.status, SessionStatus.resting);
+          engine.skipRest();
+        }
+      }
+
+      expect(visited, <String>['A', 'B', 'A', 'B']);
+      expect(engine.state.status, SessionStatus.done);
+    },
+  );
+
+  test(
+    'runs uneven expanded set queue without reordering after first cycle',
+    () {
+      const baseSequence = <TrainingExercise>[
+        TrainingExercise(
+          exerciseId: 'A',
+          mode: ExerciseMode.reps,
+          value: 10,
+          restSeconds: 20,
+        ),
+        TrainingExercise(
+          exerciseId: 'B',
+          mode: ExerciseMode.reps,
+          value: 12,
+          restSeconds: 20,
+        ),
+        TrainingExercise(
+          exerciseId: 'C',
+          mode: ExerciseMode.reps,
+          value: 14,
+          restSeconds: 20,
+        ),
+      ];
+      final items = interleaveTrainingSets(
+        sequence: baseSequence,
+        setCounts: <int>[3, 2, 3],
+      );
+      final engine = TrainingSessionEngine(
+        TrainingPlan(id: 'p5', name: 'Uneven sets', items: items),
+      );
+
+      final visited = _completeRepsQueue(engine);
+
+      expect(visited, <String>['A', 'B', 'C', 'A', 'B', 'C', 'A', 'C']);
+      expect(engine.state.status, SessionStatus.done);
+      expect(engine.state.currentIndex, items.length - 1);
+    },
+  );
+}
+
+List<String> _completeRepsQueue(TrainingSessionEngine engine) {
+  final visited = <String>[];
+
+  while (engine.state.status != SessionStatus.done) {
+    expect(engine.state.status, SessionStatus.running);
+    visited.add(engine.currentItem.exerciseId);
+    engine.completeCurrentReps();
+    if (engine.state.status == SessionStatus.resting) {
+      engine.skipRest();
+    }
+  }
+
+  return visited;
 }

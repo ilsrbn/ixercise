@@ -2,20 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ixercise/design_system/ix_button.dart';
 import 'package:ixercise/features/onboarding/onboarding_controller.dart';
+import 'package:ixercise/features/onboarding/exercise_group_icon.dart';
 
 class OnboardingScreen extends ConsumerWidget {
-  const OnboardingScreen({
-    super.key,
-    this.onContinue,
-  });
+  const OnboardingScreen({super.key, this.onContinue});
 
   final Future<void> Function(Set<String>)? onContinue;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final OnboardingState state = ref.watch(onboardingControllerProvider);
-    final OnboardingController controller =
-        ref.read(onboardingControllerProvider.notifier);
+    final OnboardingController controller = ref.read(
+      onboardingControllerProvider.notifier,
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
@@ -36,7 +35,9 @@ class OnboardingScreen extends ConsumerWidget {
                         margin: EdgeInsets.only(right: i == 1 ? 0 : 6),
                         height: 3,
                         decoration: BoxDecoration(
-                          color: i == 0 ? const Color(0xFF0A0A0A) : const Color(0xFFE8E8E8),
+                          color: i == 0
+                              ? const Color(0xFF0A0A0A)
+                              : const Color(0xFFE8E8E8),
                           borderRadius: BorderRadius.circular(3),
                         ),
                       ),
@@ -107,10 +108,16 @@ class OnboardingScreen extends ConsumerWidget {
                       return OutlinedButton(
                         onPressed: () => controller.setGroup(group),
                         style: OutlinedButton.styleFrom(
-                          backgroundColor: active ? const Color(0xFF0A0A0A) : Colors.transparent,
-                          foregroundColor: active ? Colors.white : const Color(0xFF0A0A0A),
+                          backgroundColor: active
+                              ? const Color(0xFF0A0A0A)
+                              : Colors.transparent,
+                          foregroundColor: active
+                              ? Colors.white
+                              : const Color(0xFF0A0A0A),
                           side: BorderSide(
-                            color: active ? const Color(0xFF0A0A0A) : const Color(0xFFE8E8E8),
+                            color: active
+                                ? const Color(0xFF0A0A0A)
+                                : const Color(0xFFE8E8E8),
                           ),
                           shape: const StadiumBorder(),
                         ),
@@ -132,7 +139,9 @@ class OnboardingScreen extends ConsumerWidget {
                   ),
                   itemBuilder: (BuildContext context, int index) {
                     final exercise = state.filteredExercises[index];
-                    final bool selected = state.selectedExerciseIds.contains(exercise.id);
+                    final bool selected = state.selectedExerciseIds.contains(
+                      exercise.id,
+                    );
                     return InkWell(
                       key: Key('exercise_card_${exercise.id}'),
                       onTap: () => controller.toggleExercise(exercise.id),
@@ -141,9 +150,13 @@ class OnboardingScreen extends ConsumerWidget {
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(18),
-                          color: selected ? const Color(0xFF0A0A0A) : Colors.white,
+                          color: selected
+                              ? const Color(0xFF0A0A0A)
+                              : Colors.white,
                           border: Border.all(
-                            color: selected ? const Color(0xFF0A0A0A) : const Color(0xFFE8E8E8),
+                            color: selected
+                                ? const Color(0xFF0A0A0A)
+                                : const Color(0xFFE8E8E8),
                           ),
                         ),
                         child: Stack(
@@ -151,10 +164,12 @@ class OnboardingScreen extends ConsumerWidget {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
-                                Icon(
-                                  Icons.fitness_center_outlined,
-                                  size: 28,
-                                  color: selected ? Colors.white : const Color(0xFF0A0A0A),
+                                ExerciseGroupIcon(
+                                  group: exercise.group,
+                                  size: 38,
+                                  color: selected
+                                      ? Colors.white
+                                      : const Color(0xFF0A0A0A),
                                 ),
                                 const Spacer(),
                                 Text(
@@ -162,7 +177,9 @@ class OnboardingScreen extends ConsumerWidget {
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: selected ? Colors.white : const Color(0xFF0A0A0A),
+                                    color: selected
+                                        ? Colors.white
+                                        : const Color(0xFF0A0A0A),
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -188,7 +205,11 @@ class OnboardingScreen extends ConsumerWidget {
                                     color: Color(0xFFE11D2E),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(Icons.check, size: 14, color: Colors.white),
+                                  child: const Icon(
+                                    Icons.check,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                           ],
@@ -242,7 +263,8 @@ class OnboardingScreen extends ConsumerWidget {
                         key: const Key('onboarding_continue'),
                         label: 'Continue',
                         onPressed: state.canContinue
-                            ? () async => onContinue?.call(state.selectedExerciseIds)
+                            ? () async =>
+                                  onContinue?.call(state.selectedExerciseIds)
                             : null,
                       ),
                     ),

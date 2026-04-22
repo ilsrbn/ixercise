@@ -6,7 +6,9 @@ import 'package:ixercise/design_system/tokens.dart';
 import 'package:ixercise/domain/models.dart';
 import 'package:ixercise/domain/training_set_expander.dart';
 import 'package:ixercise/features/home/home_controller.dart';
+import 'package:ixercise/features/onboarding/exercise_catalog.dart';
 import 'package:ixercise/features/onboarding/onboarding_controller.dart';
+import 'package:ixercise/features/onboarding/exercise_group_icon.dart';
 
 class OnboardingTrainingSetupScreen extends ConsumerStatefulWidget {
   const OnboardingTrainingSetupScreen({
@@ -111,21 +113,6 @@ class _OnboardingTrainingSetupScreenState
             ListView(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 140),
               children: <Widget>[
-                Row(
-                  children: List<Widget>.generate(2, (int i) {
-                    return Expanded(
-                      child: Container(
-                        margin: EdgeInsets.only(right: i == 1 ? 0 : 6),
-                        height: 3,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0A0A0A),
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-                const SizedBox(height: 24),
                 const Text(
                   'STEP 2 OF 2',
                   style: TextStyle(
@@ -340,7 +327,7 @@ class _OnboardingTrainingSetupScreenState
   ) {
     String query = '';
     String group = 'All';
-    String groupFor(_ExerciseOpt e) => _groupForName(e.name);
+    String groupFor(_ExerciseOpt e) => groupForExerciseName(e.name);
     return showModalBottomSheet<String>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -448,6 +435,7 @@ class _OnboardingTrainingSetupScreenState
                       itemBuilder: (BuildContext context, int index) {
                         final _ExerciseOpt e = filtered[index];
                         final bool active = e.id == selectedId;
+                        final String exerciseGroup = groupFor(e);
                         return InkWell(
                           onTap: () => Navigator.of(context).pop(e.id),
                           borderRadius: BorderRadius.circular(18),
@@ -469,9 +457,9 @@ class _OnboardingTrainingSetupScreenState
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: <Widget>[
-                                    Icon(
-                                      Icons.fitness_center_outlined,
-                                      size: 24,
+                                    ExerciseGroupIcon(
+                                      group: exerciseGroup,
+                                      size: 36,
                                       color: active
                                           ? Colors.white
                                           : const Color(0xFF0A0A0A),
@@ -491,7 +479,7 @@ class _OnboardingTrainingSetupScreenState
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      groupFor(e).toUpperCase(),
+                                      exerciseGroup.toUpperCase(),
                                       style: TextStyle(
                                         fontSize: 10,
                                         color: active
@@ -1107,6 +1095,11 @@ class _ExerciseCard extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
+              IconButton(
+                tooltip: 'Change exercise',
+                onPressed: onPickExercise,
+                icon: const Icon(Icons.swap_horiz_rounded, size: 20),
+              ),
               if (onRemove != null)
                 IconButton(
                   onPressed: onRemove,
@@ -1114,29 +1107,7 @@ class _ExerciseCard extends StatelessWidget {
                 ),
             ],
           ),
-          InkWell(
-            onTap: onPickExercise,
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE8E8E8)),
-              ),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  const Icon(Icons.expand_more, size: 18),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 4),
           _StepperPill(
             label: 'Sets',
             value: item.sets,
@@ -1408,61 +1379,4 @@ class _SetupItem {
       restSeconds: restSeconds ?? this.restSeconds,
     );
   }
-}
-
-String _groupForName(String name) {
-  final String n = name.toLowerCase();
-  if (n.contains('curl') || n.contains('triceps') || n.contains('biceps')) {
-    return 'Arms';
-  }
-  if (n.contains('push-up') ||
-      n.contains('bench press') ||
-      n.contains('dumbbell press') ||
-      n.contains('flyes') ||
-      n.contains('close-grip')) {
-    return 'Chest';
-  }
-  if (n.contains('squat') ||
-      n.contains('lunge') ||
-      n.contains('calf') ||
-      n.contains('deadlift') ||
-      n.contains('step-up') ||
-      n.contains('wall sit') ||
-      n.contains('glute') ||
-      n.contains('thrust')) {
-    return 'Legs';
-  }
-  if (n.contains('plank') ||
-      n.contains('crunch') ||
-      n.contains('sit-up') ||
-      n.contains('leg raise') ||
-      n.contains('twist') ||
-      n.contains('flutter') ||
-      n.contains('v-up') ||
-      n.contains('dead bug') ||
-      n.contains('toe touches') ||
-      n.contains('heel taps') ||
-      n.contains('hollow')) {
-    return 'Core';
-  }
-  if (n.contains('row') ||
-      n.contains('superman') ||
-      n.contains('pullovers') ||
-      n.contains('snow angels') ||
-      n.contains('shrugs')) {
-    return 'Back';
-  }
-  if (n.contains('jump') ||
-      n.contains('run') ||
-      n.contains('burpee') ||
-      n.contains('high knees') ||
-      n.contains('fast') ||
-      n.contains('boxing') ||
-      n.contains('crawl') ||
-      n.contains('inchworm') ||
-      n.contains('rope') ||
-      n.contains('intervals')) {
-    return 'Cardio';
-  }
-  return 'Other';
 }

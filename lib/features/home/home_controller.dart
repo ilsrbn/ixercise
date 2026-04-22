@@ -32,14 +32,17 @@ class HomeState {
 }
 
 class HomeController extends StateNotifier<HomeState> {
-  HomeController(this._planRepository, this._selectionRepository, this._scheduleRepository)
-      : super(
-          const HomeState(
-            plans: <TrainingPlan>[],
-            availableExerciseIds: <String>[],
-            schedulesByPlanId: <String, Map<String, dynamic>>{},
-          ),
-        ) {
+  HomeController(
+    this._planRepository,
+    this._selectionRepository,
+    this._scheduleRepository,
+  ) : super(
+        const HomeState(
+          plans: <TrainingPlan>[],
+          availableExerciseIds: <String>[],
+          schedulesByPlanId: <String, Map<String, dynamic>>{},
+        ),
+      ) {
     hydrate();
   }
 
@@ -49,9 +52,13 @@ class HomeController extends StateNotifier<HomeState> {
 
   Future<void> hydrate() async {
     final List<TrainingPlan> plans = await _planRepository.load();
-    final List<String> selected = (await _selectionRepository.load()).toList(growable: false);
-    final List<Map<String, dynamic>> scheduleList = await _scheduleRepository.load();
-    final Map<String, Map<String, dynamic>> schedulesByPlanId = <String, Map<String, dynamic>>{};
+    final List<String> selected = (await _selectionRepository.load()).toList(
+      growable: false,
+    );
+    final List<Map<String, dynamic>> scheduleList = await _scheduleRepository
+        .load();
+    final Map<String, Map<String, dynamic>> schedulesByPlanId =
+        <String, Map<String, dynamic>>{};
     for (final Map<String, dynamic> item in scheduleList) {
       final String planId = item['planId'] as String? ?? '';
       if (planId.isNotEmpty) {
@@ -119,21 +126,15 @@ class HomeController extends StateNotifier<HomeState> {
   Future<void> createTrainingFromSequence({
     required String name,
     required List<TrainingExercise> sequence,
-    int rounds = 1,
     Map<String, dynamic>? schedule,
   }) async {
     if (sequence.isEmpty) {
       return;
     }
-    final int safeRounds = rounds < 1 ? 1 : rounds;
-    final List<TrainingExercise> expanded = <TrainingExercise>[];
-    for (int i = 0; i < safeRounds; i++) {
-      expanded.addAll(sequence);
-    }
     final TrainingPlan plan = TrainingPlan(
       id: 'plan-${DateTime.now().millisecondsSinceEpoch}',
       name: name.trim().isEmpty ? 'Custom Training' : name.trim(),
-      items: expanded,
+      items: sequence,
     );
     final List<TrainingPlan> next = <TrainingPlan>[...state.plans, plan];
     await _planRepository.save(next);
@@ -143,7 +144,9 @@ class HomeController extends StateNotifier<HomeState> {
         ...state.schedulesByPlanId,
         plan.id: <String, dynamic>{...schedule, 'planId': plan.id},
       };
-      await _scheduleRepository.save(nextSchedules.values.toList(growable: false));
+      await _scheduleRepository.save(
+        nextSchedules.values.toList(growable: false),
+      );
     }
     state = state.copyWith(plans: next, schedulesByPlanId: nextSchedules);
   }
@@ -152,25 +155,21 @@ class HomeController extends StateNotifier<HomeState> {
     required String planId,
     required String name,
     required List<TrainingExercise> sequence,
-    int rounds = 1,
     Map<String, dynamic>? schedule,
   }) async {
     if (sequence.isEmpty) {
       return;
     }
-    final int safeRounds = rounds < 1 ? 1 : rounds;
-    final List<TrainingExercise> expanded = <TrainingExercise>[];
-    for (int i = 0; i < safeRounds; i++) {
-      expanded.addAll(sequence);
-    }
-    final int index = state.plans.indexWhere((TrainingPlan p) => p.id == planId);
+    final int index = state.plans.indexWhere(
+      (TrainingPlan p) => p.id == planId,
+    );
     if (index < 0) {
       return;
     }
     final TrainingPlan updated = TrainingPlan(
       id: planId,
       name: name.trim().isEmpty ? state.plans[index].name : name.trim(),
-      items: expanded,
+      items: sequence,
     );
     final List<TrainingPlan> nextPlans = <TrainingPlan>[...state.plans];
     nextPlans[index] = updated;
@@ -183,17 +182,23 @@ class HomeController extends StateNotifier<HomeState> {
     } else {
       nextSchedules[planId] = <String, dynamic>{...schedule, 'planId': planId};
     }
-    await _scheduleRepository.save(nextSchedules.values.toList(growable: false));
+    await _scheduleRepository.save(
+      nextSchedules.values.toList(growable: false),
+    );
     state = state.copyWith(plans: nextPlans, schedulesByPlanId: nextSchedules);
   }
 
   Future<void> deleteTraining(String planId) async {
-    final List<TrainingPlan> nextPlans =
-        state.plans.where((TrainingPlan p) => p.id != planId).toList(growable: false);
+    final List<TrainingPlan> nextPlans = state.plans
+        .where((TrainingPlan p) => p.id != planId)
+        .toList(growable: false);
     await _planRepository.save(nextPlans);
     final Map<String, Map<String, dynamic>> nextSchedules =
-        <String, Map<String, dynamic>>{...state.schedulesByPlanId}..remove(planId);
-    await _scheduleRepository.save(nextSchedules.values.toList(growable: false));
+        <String, Map<String, dynamic>>{...state.schedulesByPlanId}
+          ..remove(planId);
+    await _scheduleRepository.save(
+      nextSchedules.values.toList(growable: false),
+    );
     state = state.copyWith(plans: nextPlans, schedulesByPlanId: nextSchedules);
   }
 }

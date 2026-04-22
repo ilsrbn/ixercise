@@ -119,7 +119,7 @@ List<ExerciseSeed> buildExerciseCatalog() {
         (String name) => ExerciseSeed(
           id: _idFromName(name),
           name: name,
-          group: _groupForName(name),
+          group: groupForExerciseName(name),
         ),
       )
       .toList(growable: false);
@@ -134,11 +134,27 @@ String _idFromName(String name) {
   return normalized.replaceAll(RegExp(r'^_+|_+$'), '');
 }
 
-String _groupForName(String name) {
+String groupForExerciseName(String name) {
   final String n = name.toLowerCase();
 
   if (n.contains('curl') || n.contains('triceps') || n.contains('biceps')) {
     return 'Arms';
+  }
+  if (n.contains('mountain climbers (fast)') || n.contains('plank jacks')) {
+    return 'Cardio';
+  }
+  if (!n.contains('plank') &&
+      (n.contains('shoulder') ||
+          n.contains('arnold') ||
+          (n.contains('lateral raise') && !n.contains('bent-over')) ||
+          n.contains('front raise') ||
+          n.contains('pike push-up') ||
+          n.contains('handstand'))) {
+    return 'Shoulders';
+  }
+  if (n.contains('reverse dumbbell flyes') ||
+      n.contains('bent-over lateral raise')) {
+    return 'Back';
   }
   if (n.contains('push-up') ||
       n.contains('bench press') ||

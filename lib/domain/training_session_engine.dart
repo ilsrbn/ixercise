@@ -176,7 +176,8 @@ class TrainingSessionEngine {
   }
 
   void _completeCurrentExercise() {
-    final bool hasRest = currentItem.restSeconds > 0;
+    final bool isLastItem = state.currentIndex >= plan.items.length - 1;
+    final bool hasRest = currentItem.restSeconds > 0 && !isLastItem;
     if (hasRest) {
       state = state.copyWith(
         status: SessionStatus.resting,
