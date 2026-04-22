@@ -53,9 +53,13 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen> {
     final bool isTime = item.mode == ExerciseMode.time;
 
     if (session.status == SessionStatus.resting) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => widget.onNavigateRest?.call());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => widget.onNavigateRest?.call(),
+      );
     } else if (session.status == SessionStatus.done) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => widget.onNavigateDone?.call());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => widget.onNavigateDone?.call(),
+      );
     }
 
     final int total = state.plan.items.length;
@@ -68,21 +72,25 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen> {
       body: SafeArea(
         child: Column(
           children: <Widget>[
-            const Offstage(
-              offstage: true,
-              child: Text('Training Run'),
-            ),
+            const Offstage(offstage: true, child: Text('Training Run')),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
               child: Row(
                 children: <Widget>[
-                  const Text(
-                    'END SESSION',
-                    style: TextStyle(
-                      fontSize: 11,
-                      letterSpacing: 1.2,
-                      color: Color(0xFF9A9A9A),
-                      fontWeight: FontWeight.w600,
+                  GestureDetector(
+                    onTap: controller.endSession,
+                    behavior: HitTestBehavior.opaque,
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      child: Text(
+                        'END SESSION',
+                        style: TextStyle(
+                          fontSize: 11,
+                          letterSpacing: 1.2,
+                          color: Color(0xFF9A9A9A),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
                   const Spacer(),
@@ -137,7 +145,9 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen> {
                         ),
                         const SizedBox(width: 16),
                         IxAnimatedTimerText(
-                          text: isTime ? _fmt(remaining) : item.value.toString(),
+                          text: isTime
+                              ? _fmt(remaining)
+                              : item.value.toString(),
                           style: const TextStyle(
                             fontSize: 96,
                             height: 0.9,
@@ -150,12 +160,18 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen> {
                     const SizedBox(height: 8),
                     Text(
                       isTime ? 'Seconds remaining' : 'Reps to complete',
-                      style: const TextStyle(fontSize: 14, color: Color(0xFF6B6B6B)),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF6B6B6B),
+                      ),
                     ),
                     const Spacer(),
                     if (session.currentIndex + 1 < state.plan.items.length)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(14),
@@ -177,12 +193,18 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                state.plan.items[session.currentIndex + 1].exerciseId,
-                                style: const TextStyle(fontWeight: FontWeight.w600),
+                                state
+                                    .plan
+                                    .items[session.currentIndex + 1]
+                                    .exerciseId,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                             Text(
-                              state.plan.items[session.currentIndex + 1].mode == ExerciseMode.time
+                              state.plan.items[session.currentIndex + 1].mode ==
+                                      ExerciseMode.time
                                   ? '${state.plan.items[session.currentIndex + 1].value}s'
                                   : '×${state.plan.items[session.currentIndex + 1].value}',
                               style: const TextStyle(
@@ -211,9 +233,15 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen> {
                         side: const BorderSide(color: Color(0xFFE8E8E8)),
                       ),
                       icon: Icon(
-                        session.status == SessionStatus.paused ? Icons.play_arrow : Icons.pause,
+                        session.status == SessionStatus.paused
+                            ? Icons.play_arrow
+                            : Icons.pause,
                       ),
-                      label: Text(session.status == SessionStatus.paused ? 'Resume' : 'Pause'),
+                      label: Text(
+                        session.status == SessionStatus.paused
+                            ? 'Resume'
+                            : 'Pause',
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),

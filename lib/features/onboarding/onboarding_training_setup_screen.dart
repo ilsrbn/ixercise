@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ixercise/design_system/ix_button.dart';
 import 'package:ixercise/design_system/tokens.dart';
 import 'package:ixercise/domain/models.dart';
+import 'package:ixercise/domain/training_set_expander.dart';
 import 'package:ixercise/features/home/home_controller.dart';
 import 'package:ixercise/features/onboarding/onboarding_controller.dart';
 
@@ -32,7 +33,6 @@ class _OnboardingTrainingSetupScreenState
     text: 'My First Training',
   );
   final List<_SetupItem> _items = <_SetupItem>[];
-  int _rounds = 1;
   _ScheduleType _scheduleType = _ScheduleType.none;
   Set<int> _weekdays = <int>{1, 3, 5};
   String _scheduleTime = '07:30';
@@ -51,13 +51,16 @@ class _OnboardingTrainingSetupScreenState
       final String type = widget.initialSchedule!['type'] as String? ?? 'none';
       if (type == 'weekdays') {
         _scheduleType = _ScheduleType.weekdays;
-        _weekdays = (widget.initialSchedule!['weekdays'] as List<dynamic>? ?? <dynamic>[])
-            .whereType<int>()
-            .toSet();
+        _weekdays =
+            (widget.initialSchedule!['weekdays'] as List<dynamic>? ??
+                    <dynamic>[])
+                .whereType<int>()
+                .toSet();
       } else if (type == 'alternating') {
         _scheduleType = _ScheduleType.alternating;
       }
-      _scheduleTime = widget.initialSchedule!['time'] as String? ?? _scheduleTime;
+      _scheduleTime =
+          widget.initialSchedule!['time'] as String? ?? _scheduleTime;
     }
     _nameController.addListener(() => setState(() {}));
   }
@@ -73,7 +76,9 @@ class _OnboardingTrainingSetupScreenState
         _scheduleType != _ScheduleType.weekdays || _weekdays.isNotEmpty;
     return _nameController.text.trim().isNotEmpty &&
         _items.isNotEmpty &&
-        _items.every((item) => item.exerciseId.trim().isNotEmpty && item.value > 0) &&
+        _items.every(
+          (item) => item.exerciseId.trim().isNotEmpty && item.value > 0,
+        ) &&
         scheduleValid;
   }
 
@@ -87,17 +92,15 @@ class _OnboardingTrainingSetupScreenState
       _seededFromSelection = true;
       _items
         ..clear()
-        ..addAll(
-          <_SetupItem>[
-            _SetupItem(
-                  exerciseId: allExercises.first.id,
-                  mode: ExerciseMode.reps,
-                  value: 10,
-                  sets: 3,
-                  restSeconds: 20,
-                ),
-          ],
-        );
+        ..addAll(<_SetupItem>[
+          _SetupItem(
+            exerciseId: allExercises.first.id,
+            mode: ExerciseMode.reps,
+            value: 10,
+            sets: 3,
+            restSeconds: 20,
+          ),
+        ]);
     }
 
     return Scaffold(
@@ -172,17 +175,12 @@ class _OnboardingTrainingSetupScreenState
                   ),
                 ),
                 const SizedBox(height: 10),
-                _RoundsCard(
-                  rounds: _rounds,
-                  onDecrease: _rounds > 1 ? () => setState(() => _rounds--) : null,
-                  onIncrease: () => setState(() => _rounds++),
-                ),
-                const SizedBox(height: 10),
                 _ScheduleCard(
                   scheduleType: _scheduleType,
                   weekdays: _weekdays,
                   time: _scheduleTime,
-                  onTypeChanged: (_ScheduleType type) => setState(() => _scheduleType = type),
+                  onTypeChanged: (_ScheduleType type) =>
+                      setState(() => _scheduleType = type),
                   onToggleWeekday: (int day) {
                     setState(() {
                       if (_weekdays.contains(day)) {
@@ -193,7 +191,11 @@ class _OnboardingTrainingSetupScreenState
                     });
                   },
                   onPickTime: () async {
-                    final String? picked = await _pickClock(context, _scheduleTime, 'Schedule time');
+                    final String? picked = await _pickClock(
+                      context,
+                      _scheduleTime,
+                      'Schedule time',
+                    );
                     if (picked != null) {
                       setState(() => _scheduleTime = picked);
                     }
@@ -205,36 +207,61 @@ class _OnboardingTrainingSetupScreenState
                   return _ExerciseCard(
                     title: _nameForId(onboarding, _items[index].exerciseId),
                     item: _items[index],
-                    onChanged: (_SetupItem next) => setState(() => _items[index] = next),
+                    onChanged: (_SetupItem next) =>
+                        setState(() => _items[index] = next),
                     onPickExercise: () async {
-                      final String? picked =
-                          await _pickExercise(context, available, _items[index].exerciseId);
+                      final String? picked = await _pickExercise(
+                        context,
+                        available,
+                        _items[index].exerciseId,
+                      );
                       if (picked != null) {
-                        setState(() => _items[index] = _items[index].copyWith(exerciseId: picked));
+                        setState(
+                          () => _items[index] = _items[index].copyWith(
+                            exerciseId: picked,
+                          ),
+                        );
                       }
                     },
                     onPickWorkDuration: _items[index].mode == ExerciseMode.time
                         ? () async {
-                            final int? picked =
-                                await _pickDuration(context, _items[index].value, 'Work duration');
+                            final int? picked = await _pickDuration(
+                              context,
+                              _items[index].value,
+                              'Work duration',
+                            );
                             if (picked != null && picked > 0) {
-                              setState(() => _items[index] = _items[index].copyWith(value: picked));
+                              setState(
+                                () => _items[index] = _items[index].copyWith(
+                                  value: picked,
+                                ),
+                              );
                             }
                           }
                         : null,
                     onPickRestDuration: () async {
-                      final int? picked =
-                          await _pickDuration(context, _items[index].restSeconds, 'Rest duration');
+                      final int? picked = await _pickDuration(
+                        context,
+                        _items[index].restSeconds,
+                        'Rest duration',
+                      );
                       if (picked != null && picked >= 0) {
                         setState(
-                          () => _items[index] = _items[index].copyWith(restSeconds: picked),
+                          () => _items[index] = _items[index].copyWith(
+                            restSeconds: picked,
+                          ),
                         );
                       }
                     },
                     onSetCountChanged: (int sets) {
-                      setState(() => _items[index] = _items[index].copyWith(sets: sets));
+                      setState(
+                        () =>
+                            _items[index] = _items[index].copyWith(sets: sets),
+                      );
                     },
-                    onRemove: _items.length > 1 ? () => setState(() => _items.removeAt(index)) : null,
+                    onRemove: _items.length > 1
+                        ? () => setState(() => _items.removeAt(index))
+                        : null,
                   );
                 }),
                 const SizedBox(height: 8),
@@ -323,7 +350,9 @@ class _OnboardingTrainingSetupScreenState
           builder: (BuildContext context, StateSetter setModalState) {
             final List<_ExerciseOpt> filtered = available
                 .where((e) => group == 'All' || groupFor(e) == group)
-                .where((e) => query.isEmpty || e.name.toLowerCase().contains(query))
+                .where(
+                  (e) => query.isEmpty || e.name.toLowerCase().contains(query),
+                )
                 .toList(growable: false);
             final List<String> groups = <String>{
               'All',
@@ -347,13 +376,16 @@ class _OnboardingTrainingSetupScreenState
                     ),
                   ),
                   const SizedBox(height: 14),
-                  const Text('Pick exercise',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                  const Text(
+                    'Pick exercise',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
                   const SizedBox(height: 12),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     child: TextField(
-                      onChanged: (v) => setModalState(() => query = v.trim().toLowerCase()),
+                      onChanged: (v) =>
+                          setModalState(() => query = v.trim().toLowerCase()),
                       decoration: InputDecoration(
                         hintText: 'Search exercises',
                         hintStyle: const TextStyle(color: Color(0xFF9A9A9A)),
@@ -385,9 +417,15 @@ class _OnboardingTrainingSetupScreenState
                         return OutlinedButton(
                           onPressed: () => setModalState(() => group = g),
                           style: OutlinedButton.styleFrom(
-                            backgroundColor: active ? IxColors.ink : Colors.transparent,
-                            foregroundColor: active ? Colors.white : IxColors.ink,
-                            side: BorderSide(color: active ? IxColors.ink : IxColors.line),
+                            backgroundColor: active
+                                ? IxColors.ink
+                                : Colors.transparent,
+                            foregroundColor: active
+                                ? Colors.white
+                                : IxColors.ink,
+                            side: BorderSide(
+                              color: active ? IxColors.ink : IxColors.line,
+                            ),
                             shape: const StadiumBorder(),
                           ),
                           child: Text(g),
@@ -400,12 +438,13 @@ class _OnboardingTrainingSetupScreenState
                     child: GridView.builder(
                       padding: const EdgeInsets.fromLTRB(14, 0, 14, 18),
                       itemCount: filtered.length,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: 1.05,
-                        crossAxisSpacing: 10,
-                        mainAxisSpacing: 10,
-                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 1.05,
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 10,
+                          ),
                       itemBuilder: (BuildContext context, int index) {
                         final _ExerciseOpt e = filtered[index];
                         final bool active = e.id == selectedId;
@@ -416,9 +455,13 @@ class _OnboardingTrainingSetupScreenState
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(18),
-                              color: active ? const Color(0xFF0A0A0A) : Colors.white,
+                              color: active
+                                  ? const Color(0xFF0A0A0A)
+                                  : Colors.white,
                               border: Border.all(
-                                color: active ? const Color(0xFF0A0A0A) : const Color(0xFFE8E8E8),
+                                color: active
+                                    ? const Color(0xFF0A0A0A)
+                                    : const Color(0xFFE8E8E8),
                               ),
                             ),
                             child: Stack(
@@ -429,7 +472,9 @@ class _OnboardingTrainingSetupScreenState
                                     Icon(
                                       Icons.fitness_center_outlined,
                                       size: 24,
-                                      color: active ? Colors.white : const Color(0xFF0A0A0A),
+                                      color: active
+                                          ? Colors.white
+                                          : const Color(0xFF0A0A0A),
                                     ),
                                     const Spacer(),
                                     Text(
@@ -439,7 +484,9 @@ class _OnboardingTrainingSetupScreenState
                                       style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
-                                        color: active ? Colors.white : const Color(0xFF0A0A0A),
+                                        color: active
+                                            ? Colors.white
+                                            : const Color(0xFF0A0A0A),
                                       ),
                                     ),
                                     const SizedBox(height: 4),
@@ -465,7 +512,11 @@ class _OnboardingTrainingSetupScreenState
                                         color: IxColors.accent,
                                         shape: BoxShape.circle,
                                       ),
-                                      child: const Icon(Icons.check, size: 14, color: Colors.white),
+                                      child: const Icon(
+                                        Icons.check,
+                                        size: 14,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
                               ],
@@ -484,7 +535,11 @@ class _OnboardingTrainingSetupScreenState
     );
   }
 
-  Future<int?> _pickDuration(BuildContext context, int initialSeconds, String title) {
+  Future<int?> _pickDuration(
+    BuildContext context,
+    int initialSeconds,
+    String title,
+  ) {
     int minutes = initialSeconds ~/ 60;
     int seconds = initialSeconds % 60;
     final FixedExtentScrollController minuteController =
@@ -516,7 +571,13 @@ class _OnboardingTrainingSetupScreenState
                     ),
                   ),
                   const SizedBox(height: 14),
-                  Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   Expanded(
                     child: Row(
@@ -530,7 +591,11 @@ class _OnboardingTrainingSetupScreenState
                             },
                             children: List<Widget>.generate(
                               60,
-                              (int i) => Center(child: Text('${i.toString().padLeft(2, '0')} m')),
+                              (int i) => Center(
+                                child: Text(
+                                  '${i.toString().padLeft(2, '0')} m',
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -543,7 +608,11 @@ class _OnboardingTrainingSetupScreenState
                             },
                             children: List<Widget>.generate(
                               60,
-                              (int i) => Center(child: Text('${i.toString().padLeft(2, '0')} s')),
+                              (int i) => Center(
+                                child: Text(
+                                  '${i.toString().padLeft(2, '0')} s',
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -556,7 +625,8 @@ class _OnboardingTrainingSetupScreenState
                       width: double.infinity,
                       child: IxButton.primary(
                         label: 'Apply',
-                        onPressed: () => Navigator.of(context).pop((minutes * 60) + seconds),
+                        onPressed: () =>
+                            Navigator.of(context).pop((minutes * 60) + seconds),
                       ),
                     ),
                   ),
@@ -569,7 +639,11 @@ class _OnboardingTrainingSetupScreenState
     );
   }
 
-  Future<String?> _pickClock(BuildContext context, String initial, String title) {
+  Future<String?> _pickClock(
+    BuildContext context,
+    String initial,
+    String title,
+  ) {
     final List<String> parts = initial.split(':');
     int hour = int.tryParse(parts.first) ?? 7;
     int minute = int.tryParse(parts.length > 1 ? parts[1] : '30') ?? 30;
@@ -602,7 +676,13 @@ class _OnboardingTrainingSetupScreenState
                     ),
                   ),
                   const SizedBox(height: 14),
-                  Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   Expanded(
                     child: Row(
@@ -611,10 +691,15 @@ class _OnboardingTrainingSetupScreenState
                           child: CupertinoPicker(
                             itemExtent: 36,
                             scrollController: hourController,
-                            onSelectedItemChanged: (int value) => setModalState(() => hour = value),
+                            onSelectedItemChanged: (int value) =>
+                                setModalState(() => hour = value),
                             children: List<Widget>.generate(
                               24,
-                              (int i) => Center(child: Text('${i.toString().padLeft(2, '0')} h')),
+                              (int i) => Center(
+                                child: Text(
+                                  '${i.toString().padLeft(2, '0')} h',
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -626,7 +711,11 @@ class _OnboardingTrainingSetupScreenState
                                 setModalState(() => minute = value),
                             children: List<Widget>.generate(
                               60,
-                              (int i) => Center(child: Text('${i.toString().padLeft(2, '0')} m')),
+                              (int i) => Center(
+                                child: Text(
+                                  '${i.toString().padLeft(2, '0')} m',
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -676,16 +765,17 @@ class _OnboardingTrainingSetupScreenState
     final OnboardingState onboarding = ref.read(onboardingControllerProvider);
     final List<_SetupItem> out = <_SetupItem>[];
     for (final TrainingExercise item in plan.items) {
-      if (out.isNotEmpty) {
-        final _SetupItem last = out.last;
-        final String lastName = _nameForId(onboarding, last.exerciseId);
-        if (lastName == item.exerciseId &&
-            last.mode == item.mode &&
-            last.value == item.value &&
-            last.restSeconds == item.restSeconds) {
-          out[out.length - 1] = last.copyWith(sets: last.sets + 1);
-          continue;
-        }
+      final int existingIndex = out.indexWhere((_SetupItem setup) {
+        final String setupName = _nameForId(onboarding, setup.exerciseId);
+        return setupName == item.exerciseId &&
+            setup.mode == item.mode &&
+            setup.value == item.value &&
+            setup.restSeconds == item.restSeconds;
+      });
+      if (existingIndex >= 0) {
+        final _SetupItem existing = out[existingIndex];
+        out[existingIndex] = existing.copyWith(sets: existing.sets + 1);
+        continue;
       }
       out.add(
         _SetupItem(
@@ -704,29 +794,22 @@ class _OnboardingTrainingSetupScreenState
     final List<TrainingExercise> sequence = _items
         .map(
           (_SetupItem item) => TrainingExercise(
-            exerciseId: _nameForId(ref.read(onboardingControllerProvider), item.exerciseId),
+            exerciseId: _nameForId(
+              ref.read(onboardingControllerProvider),
+              item.exerciseId,
+            ),
             mode: item.mode,
             value: item.value,
             restSeconds: item.restSeconds,
           ),
         )
         .toList(growable: false);
-    final List<TrainingExercise> expandedBySets = <TrainingExercise>[];
-    for (int i = 0; i < sequence.length; i++) {
-      final _SetupItem item = _items[i];
-      final TrainingExercise base = sequence[i];
-      final int sets = item.sets < 1 ? 1 : item.sets;
-      for (int s = 0; s < sets; s++) {
-        expandedBySets.add(
-          TrainingExercise(
-            exerciseId: base.exerciseId,
-            mode: base.mode,
-            value: base.value,
-            restSeconds: base.restSeconds,
-          ),
-        );
-      }
-    }
+    final List<TrainingExercise> expandedBySets = interleaveTrainingSets(
+      sequence: sequence,
+      setCounts: _items
+          .map((_SetupItem item) => item.sets)
+          .toList(growable: false),
+    );
     Map<String, dynamic>? schedule;
     if (_scheduleType == _ScheduleType.weekdays) {
       schedule = <String, dynamic>{
@@ -741,18 +824,20 @@ class _OnboardingTrainingSetupScreenState
       };
     }
     if (widget.initialPlan == null) {
-      await ref.read(homeControllerProvider.notifier).createTrainingFromSequence(
+      await ref
+          .read(homeControllerProvider.notifier)
+          .createTrainingFromSequence(
             name: _nameController.text.trim(),
             sequence: expandedBySets,
-            rounds: _rounds,
             schedule: schedule,
           );
     } else {
-      await ref.read(homeControllerProvider.notifier).updateTrainingFromSequence(
+      await ref
+          .read(homeControllerProvider.notifier)
+          .updateTrainingFromSequence(
             planId: widget.initialPlan!.id,
             name: _nameController.text.trim(),
             sequence: expandedBySets,
-            rounds: _rounds,
             schedule: schedule,
           );
     }
@@ -766,49 +851,6 @@ class _ExerciseOpt {
   const _ExerciseOpt(this.id, this.name);
   final String id;
   final String name;
-}
-
-class _RoundsCard extends StatelessWidget {
-  const _RoundsCard({
-    required this.rounds,
-    required this.onDecrease,
-    required this.onIncrease,
-  });
-
-  final int rounds;
-  final VoidCallback? onDecrease;
-  final VoidCallback onIncrease;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE8E8E8)),
-      ),
-      child: Row(
-        children: <Widget>[
-          const Expanded(
-            child: Text(
-              'Rounds',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-          _MiniAdjust(label: '−', onTap: onDecrease),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Text(
-              '$rounds',
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-          _MiniAdjust(label: '+', onTap: onIncrease),
-        ],
-      ),
-    );
-  }
 }
 
 class _ScheduleCard extends StatelessWidget {
@@ -868,13 +910,48 @@ class _ScheduleCard extends StatelessWidget {
             Wrap(
               spacing: 6,
               children: <Widget>[
-                _WeekdayChip(day: 1, label: 'Mon', active: weekdays.contains(1), onTap: onToggleWeekday),
-                _WeekdayChip(day: 2, label: 'Tue', active: weekdays.contains(2), onTap: onToggleWeekday),
-                _WeekdayChip(day: 3, label: 'Wed', active: weekdays.contains(3), onTap: onToggleWeekday),
-                _WeekdayChip(day: 4, label: 'Thu', active: weekdays.contains(4), onTap: onToggleWeekday),
-                _WeekdayChip(day: 5, label: 'Fri', active: weekdays.contains(5), onTap: onToggleWeekday),
-                _WeekdayChip(day: 6, label: 'Sat', active: weekdays.contains(6), onTap: onToggleWeekday),
-                _WeekdayChip(day: 7, label: 'Sun', active: weekdays.contains(7), onTap: onToggleWeekday),
+                _WeekdayChip(
+                  day: 1,
+                  label: 'Mon',
+                  active: weekdays.contains(1),
+                  onTap: onToggleWeekday,
+                ),
+                _WeekdayChip(
+                  day: 2,
+                  label: 'Tue',
+                  active: weekdays.contains(2),
+                  onTap: onToggleWeekday,
+                ),
+                _WeekdayChip(
+                  day: 3,
+                  label: 'Wed',
+                  active: weekdays.contains(3),
+                  onTap: onToggleWeekday,
+                ),
+                _WeekdayChip(
+                  day: 4,
+                  label: 'Thu',
+                  active: weekdays.contains(4),
+                  onTap: onToggleWeekday,
+                ),
+                _WeekdayChip(
+                  day: 5,
+                  label: 'Fri',
+                  active: weekdays.contains(5),
+                  onTap: onToggleWeekday,
+                ),
+                _WeekdayChip(
+                  day: 6,
+                  label: 'Sat',
+                  active: weekdays.contains(6),
+                  onTap: onToggleWeekday,
+                ),
+                _WeekdayChip(
+                  day: 7,
+                  label: 'Sun',
+                  active: weekdays.contains(7),
+                  onTap: onToggleWeekday,
+                ),
               ],
             ),
           ],
@@ -884,7 +961,10 @@ class _ScheduleCard extends StatelessWidget {
               onTap: onPickTime,
               borderRadius: BorderRadius.circular(10),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: const Color(0xFFE8E8E8)),
@@ -893,7 +973,10 @@ class _ScheduleCard extends StatelessWidget {
                   children: <Widget>[
                     const Text('Time', style: TextStyle(color: IxColors.mute)),
                     const Spacer(),
-                    Text(time, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    Text(
+                      time,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
                     const SizedBox(width: 6),
                     const Icon(Icons.unfold_more, size: 16),
                   ],
@@ -965,7 +1048,9 @@ class _WeekdayChip extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(999),
           color: active ? const Color(0xFFE11D2E) : Colors.white,
-          border: Border.all(color: active ? const Color(0xFFE11D2E) : const Color(0xFFE8E8E8)),
+          border: Border.all(
+            color: active ? const Color(0xFFE11D2E) : const Color(0xFFE8E8E8),
+          ),
         ),
         child: Text(
           label,
@@ -1023,7 +1108,10 @@ class _ExerciseCard extends StatelessWidget {
                 ),
               ),
               if (onRemove != null)
-                IconButton(onPressed: onRemove, icon: const Icon(Icons.close, size: 18)),
+                IconButton(
+                  onPressed: onRemove,
+                  icon: const Icon(Icons.close, size: 18),
+                ),
             ],
           ),
           InkWell(
@@ -1067,12 +1155,14 @@ class _ExerciseCard extends StatelessWidget {
                 _ModePill(
                   label: 'Reps',
                   active: item.mode == ExerciseMode.reps,
-                  onTap: () => onChanged(item.copyWith(mode: ExerciseMode.reps)),
+                  onTap: () =>
+                      onChanged(item.copyWith(mode: ExerciseMode.reps)),
                 ),
                 _ModePill(
                   label: 'Timer',
                   active: item.mode == ExerciseMode.time,
-                  onTap: () => onChanged(item.copyWith(mode: ExerciseMode.time)),
+                  onTap: () =>
+                      onChanged(item.copyWith(mode: ExerciseMode.time)),
                 ),
               ],
             ),
@@ -1091,7 +1181,8 @@ class _ExerciseCard extends StatelessWidget {
                         label: 'Reps',
                         value: item.value,
                         min: 1,
-                        onChanged: (int value) => onChanged(item.copyWith(value: value)),
+                        onChanged: (int value) =>
+                            onChanged(item.copyWith(value: value)),
                       ),
               ),
               const SizedBox(width: 8),
@@ -1159,7 +1250,8 @@ class _DurationChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final int m = seconds ~/ 60;
     final int s = seconds % 60;
-    final String text = '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    final String text =
+        '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -1174,8 +1266,17 @@ class _DurationChip extends StatelessWidget {
             Expanded(
               child: Column(
                 children: <Widget>[
-                  Text(text, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                  Text(label, style: const TextStyle(fontSize: 11, color: IxColors.mute)),
+                  Text(
+                    text,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                  Text(
+                    label,
+                    style: const TextStyle(fontSize: 11, color: IxColors.mute),
+                  ),
                 ],
               ),
             ),
@@ -1210,12 +1311,27 @@ class _StepperPill extends StatelessWidget {
       ),
       child: Row(
         children: <Widget>[
-          _MiniAdjust(label: '−', onTap: value > min ? () => onChanged(value - 1) : null),
+          _MiniAdjust(
+            label: '−',
+            onTap: value > min ? () => onChanged(value - 1) : null,
+          ),
           Expanded(
             child: Column(
               children: <Widget>[
-                Text('$value', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF6B6B6B))),
+                Text(
+                  '$value',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF6B6B6B),
+                  ),
+                ),
               ],
             ),
           ),
@@ -1243,12 +1359,16 @@ class _MiniAdjust extends StatelessWidget {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(999),
-          color: onTap == null ? const Color(0xFFF0F0F0) : const Color(0xFFF7F7F7),
+          color: onTap == null
+              ? const Color(0xFFF0F0F0)
+              : const Color(0xFFF7F7F7),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: onTap == null ? const Color(0xFFB0B0B0) : const Color(0xFF0A0A0A),
+            color: onTap == null
+                ? const Color(0xFFB0B0B0)
+                : const Color(0xFF0A0A0A),
             fontWeight: FontWeight.w700,
             fontSize: 16,
           ),

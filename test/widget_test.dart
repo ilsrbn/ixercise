@@ -12,13 +12,9 @@ import 'package:ixercise/app/shell.dart';
 
 void main() {
   testWidgets('app boots into onboarding route', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        child: IxerciseApp(),
-      ),
-    );
+    await tester.pumpWidget(ProviderScope(child: IxerciseApp()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Pick Your Exercises'), findsOneWidget);
+    expect(find.text('Set up your\ntraining flow.'), findsOneWidget);
   });
 }

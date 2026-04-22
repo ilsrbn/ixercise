@@ -48,27 +48,32 @@ class _RestScreenState extends ConsumerState<RestScreen> {
     final state = ref.watch(sessionControllerProvider);
     final controller = ref.read(sessionControllerProvider.notifier);
     final int remaining = state.session.remainingSeconds ?? 0;
-    final int restTotal = state.plan.items[state.session.currentIndex].restSeconds;
+    final int restTotal =
+        state.plan.items[state.session.currentIndex].restSeconds;
     final double progress = restTotal <= 0 ? 1 : (1 - (remaining / restTotal));
 
     if (state.session.status == SessionStatus.running) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => widget.onNavigateRun?.call());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => widget.onNavigateRun?.call(),
+      );
     } else if (state.session.status == SessionStatus.done) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => widget.onNavigateDone?.call());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => widget.onNavigateDone?.call(),
+      );
     }
 
-    final bool hasNext = state.session.currentIndex + 1 < state.plan.items.length;
-    final TrainingExercise? next = hasNext ? state.plan.items[state.session.currentIndex + 1] : null;
+    final bool hasNext =
+        state.session.currentIndex + 1 < state.plan.items.length;
+    final TrainingExercise? next = hasNext
+        ? state.plan.items[state.session.currentIndex + 1]
+        : null;
 
     return Scaffold(
       backgroundColor: const Color(0xFF030303),
       body: SafeArea(
         child: Column(
           children: <Widget>[
-            const Offstage(
-              offstage: true,
-              child: Text('Rest'),
-            ),
+            const Offstage(offstage: true, child: Text('Rest')),
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
               child: Row(
@@ -176,7 +181,10 @@ class _RestScreenState extends ConsumerState<RestScreen> {
                         color: const Color(0x14FFFFFF),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.fitness_center_outlined, color: Colors.white),
+                      child: const Icon(
+                        Icons.fitness_center_outlined,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -221,7 +229,9 @@ class _RestScreenState extends ConsumerState<RestScreen> {
                         foregroundColor: Colors.white,
                       ),
                       child: Text(
-                        state.session.status == SessionStatus.paused ? 'Resume' : 'Pause',
+                        state.session.status == SessionStatus.paused
+                            ? 'Resume'
+                            : 'Pause',
                       ),
                     ),
                   ),
@@ -229,7 +239,7 @@ class _RestScreenState extends ConsumerState<RestScreen> {
                   Expanded(
                     child: ElevatedButton(
                       key: const Key('rest_skip_button'),
-                      onPressed: controller.completeOrNext,
+                      onPressed: controller.skipRest,
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size.fromHeight(56),
                         shape: const StadiumBorder(),
@@ -278,10 +288,7 @@ class _AdjustButton extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: 13,
-        ),
+        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
       ),
     );
   }

@@ -20,6 +20,7 @@ class HomeOverviewScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final homeState = ref.watch(homeControllerProvider);
+    final List<TrainingPlan> todaysPlans = _plansScheduledToday(homeState);
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
@@ -53,9 +54,9 @@ class HomeOverviewScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 14),
-              const Text(
-                'SAT, APR 18',
-                style: TextStyle(
+              Text(
+                _todayLabel(),
+                style: const TextStyle(
                   fontSize: 11,
                   letterSpacing: 1.1,
                   color: Color(0xFF9A9A9A),
@@ -63,9 +64,9 @@ class HomeOverviewScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Nothing scheduled.',
-                style: TextStyle(
+              Text(
+                _headlineForToday(todaysPlans, homeState.schedulesByPlanId),
+                style: const TextStyle(
                   fontSize: 46,
                   letterSpacing: -1.4,
                   height: 1.0,
@@ -95,7 +96,10 @@ class HomeOverviewScreen extends ConsumerWidget {
                     icon: const Icon(Icons.add, size: 16),
                     label: const Text(
                       'New',
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ],
@@ -105,65 +109,78 @@ class HomeOverviewScreen extends ConsumerWidget {
                 child: homeState.isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : homeState.plans.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'No trainings yet.\nTap New to create your first one.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 16, color: Color(0xFF6B6B6B), height: 1.4),
-                            ),
-                          )
-                        : ListView.separated(
-                            itemCount: homeState.plans.length,
-                            separatorBuilder: (_, __) =>
-                                const Divider(height: 1, color: Color(0xFFE8E8E8)),
-                            itemBuilder: (BuildContext context, int index) {
-                              final TrainingPlan plan = homeState.plans[index];
-                              return _SwipeActionRow(
-                                onEdit: () => onEditTraining?.call(plan),
-                                onDelete: () => onDeleteTraining?.call(plan),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  child: Row(
-                                    children: <Widget>[
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: <Widget>[
-                                            Text(
-                                              plan.name,
-                                              style: const TextStyle(
-                                                fontSize: 26,
-                                                fontWeight: FontWeight.w600,
-                                                letterSpacing: -0.4,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              '${plan.items.length} exercises · ${_estimatedDuration(plan)} · ${_scheduleLabel(homeState.schedulesByPlanId[plan.id])}',
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                color: Color(0xFF6B6B6B),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      IconButton(
-                                        key: index == 0 ? const Key('home_start_training') : null,
-                                        onPressed: () => onStartTraining?.call(plan),
-                                        style: IconButton.styleFrom(
-                                          fixedSize: const Size(40, 40),
-                                          backgroundColor: Colors.white,
-                                          side: const BorderSide(color: Color(0xFFE8E8E8)),
-                                        ),
-                                        icon: const Icon(Icons.play_arrow_rounded, size: 18),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
+                    ? const Center(
+                        child: Text(
+                          'No trainings yet.\nTap New to create your first one.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFF6B6B6B),
+                            height: 1.4,
                           ),
+                        ),
+                      )
+                    : ListView.separated(
+                        itemCount: homeState.plans.length,
+                        separatorBuilder: (_, __) =>
+                            const Divider(height: 1, color: Color(0xFFE8E8E8)),
+                        itemBuilder: (BuildContext context, int index) {
+                          final TrainingPlan plan = homeState.plans[index];
+                          return _SwipeActionRow(
+                            onEdit: () => onEditTraining?.call(plan),
+                            onDelete: () => onDeleteTraining?.call(plan),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              child: Row(
+                                children: <Widget>[
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: <Widget>[
+                                        Text(
+                                          plan.name,
+                                          style: const TextStyle(
+                                            fontSize: 26,
+                                            fontWeight: FontWeight.w600,
+                                            letterSpacing: -0.4,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '${plan.items.length} exercises · ${_estimatedDuration(plan)} · ${_scheduleLabel(homeState.schedulesByPlanId[plan.id])}',
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Color(0xFF6B6B6B),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  IconButton(
+                                    key: index == 0
+                                        ? const Key('home_start_training')
+                                        : null,
+                                    onPressed: () =>
+                                        onStartTraining?.call(plan),
+                                    style: IconButton.styleFrom(
+                                      fixedSize: const Size(40, 40),
+                                      backgroundColor: Colors.white,
+                                      side: const BorderSide(
+                                        color: Color(0xFFE8E8E8),
+                                      ),
+                                    ),
+                                    icon: const Icon(
+                                      Icons.play_arrow_rounded,
+                                      size: 18,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
               ),
             ],
           ),
@@ -186,6 +203,69 @@ class HomeOverviewScreen extends ConsumerWidget {
     return '${m}m ${s}s';
   }
 
+  String _todayLabel() {
+    final DateTime now = DateTime.now();
+    const List<String> weekdays = <String>[
+      'MON',
+      'TUE',
+      'WED',
+      'THU',
+      'FRI',
+      'SAT',
+      'SUN',
+    ];
+    const List<String> months = <String>[
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DEC',
+    ];
+    return '${weekdays[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
+  }
+
+  List<TrainingPlan> _plansScheduledToday(HomeState homeState) {
+    final int today = DateTime.now().weekday;
+    return homeState.plans
+        .where((TrainingPlan plan) {
+          final Map<String, dynamic>? schedule =
+              homeState.schedulesByPlanId[plan.id];
+          if (schedule == null) {
+            return false;
+          }
+          final String type = schedule['type'] as String? ?? 'none';
+          if (type != 'weekdays') {
+            return false;
+          }
+          final List<dynamic> raw =
+              schedule['weekdays'] as List<dynamic>? ?? <dynamic>[];
+          return raw.whereType<int>().contains(today);
+        })
+        .toList(growable: false);
+  }
+
+  String _headlineForToday(
+    List<TrainingPlan> todaysPlans,
+    Map<String, Map<String, dynamic>> schedulesByPlanId,
+  ) {
+    if (todaysPlans.isEmpty) {
+      return 'Nothing scheduled.';
+    }
+    if (todaysPlans.length == 1) {
+      final TrainingPlan plan = todaysPlans.first;
+      final String time = schedulesByPlanId[plan.id]?['time'] as String? ?? '';
+      return time.isEmpty ? '${plan.name}\ntoday.' : '${plan.name}\nat $time.';
+    }
+    return '${todaysPlans.length} trainings\ntoday.';
+  }
+
   String _scheduleLabel(Map<String, dynamic>? schedule) {
     if (schedule == null) {
       return 'Not scheduled';
@@ -196,7 +276,8 @@ class HomeOverviewScreen extends ConsumerWidget {
       return time.isEmpty ? 'Alternating days' : 'Alternating days · $time';
     }
     if (type == 'weekdays') {
-      final List<dynamic> raw = schedule['weekdays'] as List<dynamic>? ?? <dynamic>[];
+      final List<dynamic> raw =
+          schedule['weekdays'] as List<dynamic>? ?? <dynamic>[];
       const Map<int, String> dayNames = <int, String>{
         1: 'Mon',
         2: 'Tue',
@@ -248,11 +329,17 @@ class _SwipeActionRowState extends State<_SwipeActionRow> {
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onHorizontalDragUpdate: (DragUpdateDetails details) {
-                final double next = (_drag + details.delta.dx).clamp(-_maxReveal, 0.0);
+                final double next = (_drag + details.delta.dx).clamp(
+                  -_maxReveal,
+                  0.0,
+                );
                 setState(() => _drag = next);
               },
               onHorizontalDragEnd: (_) {
-                setState(() => _drag = _drag.abs() > _maxReveal * 0.4 ? -_maxReveal : 0);
+                setState(
+                  () =>
+                      _drag = _drag.abs() > _maxReveal * 0.4 ? -_maxReveal : 0,
+                );
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 220),

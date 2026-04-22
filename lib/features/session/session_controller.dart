@@ -3,10 +3,7 @@ import 'package:ixercise/domain/models.dart';
 import 'package:ixercise/domain/training_session_engine.dart';
 
 class SessionUiState {
-  const SessionUiState({
-    required this.plan,
-    required this.session,
-  });
+  const SessionUiState({required this.plan, required this.session});
 
   final TrainingPlan plan;
   final SessionState session;
@@ -16,13 +13,13 @@ class SessionUiState {
 
 class SessionController extends StateNotifier<SessionUiState> {
   SessionController({TrainingPlan? seedPlan})
-      : _engine = TrainingSessionEngine(seedPlan ?? _defaultPlan),
-        super(
-          SessionUiState(
-            plan: seedPlan ?? _defaultPlan,
-            session: TrainingSessionEngine(seedPlan ?? _defaultPlan).state,
-          ),
-        ) {
+    : _engine = TrainingSessionEngine(seedPlan ?? _defaultPlan),
+      super(
+        SessionUiState(
+          plan: seedPlan ?? _defaultPlan,
+          session: TrainingSessionEngine(seedPlan ?? _defaultPlan).state,
+        ),
+      ) {
     _sync();
   }
 
@@ -103,11 +100,24 @@ class SessionController extends StateNotifier<SessionUiState> {
       }
     } else if (state.session.status == SessionStatus.resting) {
       _engine.skipRest();
-    } else if (state.session.status == SessionStatus.paused &&
-        state.session.remainingSeconds != null) {
-      // If paused during rest, allow skip action without forcing resume first.
-      _engine.skipRest();
+    } else if (state.session.status == SessionStatus.paused) {
+      _engine.resume();
+      if (_engine.state.status == SessionStatus.running) {
+        if (_engine.currentItem.mode == ExerciseMode.reps) {
+          _engine.completeCurrentReps();
+        } else {
+          _engine.tick(seconds: _engine.state.remainingSeconds ?? 0);
+        }
+      }
     }
+    _sync();
+  }
+
+  void skipRest() {
+    if (state.session.status == SessionStatus.paused) {
+      _engine.resume();
+    }
+    _engine.skipRest();
     _sync();
   }
 
@@ -131,14 +141,11 @@ class SessionController extends StateNotifier<SessionUiState> {
   }
 
   void _sync() {
-    state = SessionUiState(
-      plan: _engine.plan,
-      session: _engine.state,
-    );
+    state = SessionUiState(plan: _engine.plan, session: _engine.state);
   }
 }
 
 final sessionControllerProvider =
     StateNotifierProvider<SessionController, SessionUiState>(
-  (ref) => SessionController(),
-);
+      (ref) => SessionController(),
+    );

@@ -2,21 +2,25 @@ import 'package:ixercise/domain/models.dart';
 
 class TrainingSessionEngine {
   TrainingSessionEngine(this._plan, {DateTime? startedAt})
-      : assert(_plan.items.isNotEmpty, 'Training plan must have at least one item'),
-        _startedAt = startedAt ?? DateTime.now(),
-        state = SessionState(
-          planId: _plan.id,
-          currentIndex: 0,
-          status: SessionStatus.running,
-          remainingSeconds: _plan.items.first.mode == ExerciseMode.time
-              ? _plan.items.first.value
-              : null,
-          startedAt: startedAt ?? DateTime.now(),
-          elapsedSeconds: 0,
-        );
+    : assert(
+        _plan.items.isNotEmpty,
+        'Training plan must have at least one item',
+      ),
+      _startedAt = startedAt ?? DateTime.now(),
+      state = SessionState(
+        planId: _plan.id,
+        currentIndex: 0,
+        status: SessionStatus.running,
+        remainingSeconds: _plan.items.first.mode == ExerciseMode.time
+            ? _plan.items.first.value
+            : null,
+        startedAt: startedAt ?? DateTime.now(),
+        elapsedSeconds: 0,
+      );
 
   TrainingPlan _plan;
   DateTime _startedAt;
+  SessionStatus? _pausedFromStatus;
   SessionState state;
 
   TrainingPlan get plan => _plan;
@@ -30,6 +34,7 @@ class TrainingSessionEngine {
 
   void reset() {
     _startedAt = DateTime.now();
+    _pausedFromStatus = null;
     state = SessionState(
       planId: _plan.id,
       currentIndex: 0,
@@ -51,12 +56,17 @@ class TrainingSessionEngine {
     while (remaining > 0 && !isDone && state.status != SessionStatus.paused) {
       if (state.status == SessionStatus.running) {
         if (currentItem.mode == ExerciseMode.reps) {
-          state = state.copyWith(elapsedSeconds: state.elapsedSeconds + remaining);
+          state = state.copyWith(
+            elapsedSeconds: state.elapsedSeconds + remaining,
+          );
           return;
         }
 
-        final int currentRemaining = state.remainingSeconds ?? currentItem.value;
-        final int step = currentRemaining < remaining ? currentRemaining : remaining;
+        final int currentRemaining =
+            state.remainingSeconds ?? currentItem.value;
+        final int step = currentRemaining < remaining
+            ? currentRemaining
+            : remaining;
 
         state = state.copyWith(
           remainingSeconds: currentRemaining - step,
@@ -69,7 +79,9 @@ class TrainingSessionEngine {
         }
       } else if (state.status == SessionStatus.resting) {
         final int currentRemaining = state.remainingSeconds ?? 0;
-        final int step = currentRemaining < remaining ? currentRemaining : remaining;
+        final int step = currentRemaining < remaining
+            ? currentRemaining
+            : remaining;
 
         state = state.copyWith(
           remainingSeconds: currentRemaining - step,
@@ -96,9 +108,12 @@ class TrainingSessionEngine {
   }
 
   void skipRest() {
-    if (state.status != SessionStatus.resting || isDone) {
+    if ((state.status != SessionStatus.resting &&
+            _pausedFromStatus != SessionStatus.resting) ||
+        isDone) {
       return;
     }
+    _pausedFromStatus = null;
     _advanceToNextExercise();
   }
 
@@ -118,6 +133,7 @@ class TrainingSessionEngine {
     if (isDone || state.status == SessionStatus.paused) {
       return;
     }
+    _pausedFromStatus = state.status;
     state = state.copyWith(status: SessionStatus.paused);
   }
 
@@ -130,6 +146,7 @@ class TrainingSessionEngine {
       currentIndex: state.currentIndex.clamp(0, plan.items.length - 1),
       clearRemainingSeconds: true,
     );
+    _pausedFromStatus = null;
   }
 
   void resume() {
@@ -139,7 +156,11 @@ class TrainingSessionEngine {
 
     final int? remaining = state.remainingSeconds;
     final SessionStatus nextStatus =
-        remaining == null ? SessionStatus.running : _statusForRemaining(remaining);
+        _pausedFromStatus ??
+        (remaining == null
+            ? SessionStatus.running
+            : _statusForRemaining(remaining));
+    _pausedFromStatus = null;
     state = state.copyWith(status: nextStatus);
   }
 
@@ -181,7 +202,9 @@ class TrainingSessionEngine {
     state = state.copyWith(
       currentIndex: nextIndex,
       status: SessionStatus.running,
-      remainingSeconds: nextItem.mode == ExerciseMode.time ? nextItem.value : null,
+      remainingSeconds: nextItem.mode == ExerciseMode.time
+          ? nextItem.value
+          : null,
       clearRemainingSeconds: nextItem.mode == ExerciseMode.reps,
     );
   }
