@@ -117,6 +117,7 @@ GoRouter buildRouter() {
         path: '/run/:sessionId',
         pageBuilder: (context, state) => _sessionTransitionPage(
           state: state,
+          kind: SessionTransitionKind.start,
           child: TrainingRunScreen(
             sessionId: state.pathParameters['sessionId'] ?? 'default',
             onNavigateRest: () =>
@@ -130,6 +131,7 @@ GoRouter buildRouter() {
         path: '/rest/:sessionId',
         pageBuilder: (context, state) => _sessionTransitionPage(
           state: state,
+          kind: SessionTransitionKind.phase,
           child: RestScreen(
             sessionId: state.pathParameters['sessionId'] ?? 'default',
             onNavigateRun: () =>
@@ -143,6 +145,7 @@ GoRouter buildRouter() {
         path: '/done/:sessionId',
         pageBuilder: (context, state) => _sessionTransitionPage(
           state: state,
+          kind: SessionTransitionKind.done,
           child: DoneScreen(
             sessionId: state.pathParameters['sessionId'] ?? 'default',
             onBackHome: () => context.go('/home'),
@@ -153,61 +156,85 @@ GoRouter buildRouter() {
   );
 }
 
+enum SessionTransitionKind { start, phase, done }
+
 CustomTransitionPage<void> _sessionTransitionPage({
   required GoRouterState state,
   required Widget child,
+  SessionTransitionKind kind = SessionTransitionKind.phase,
 }) {
   return CustomTransitionPage<void>(
     key: state.pageKey,
-    transitionDuration: const Duration(milliseconds: 700),
-    reverseTransitionDuration: const Duration(milliseconds: 620),
+    transitionDuration: kind == SessionTransitionKind.start
+        ? const Duration(milliseconds: 480)
+        : const Duration(milliseconds: 420),
+    reverseTransitionDuration: const Duration(milliseconds: 360),
     child: child,
-    transitionsBuilder:
-        (
-          BuildContext context,
-          Animation<double> animation,
-          Animation<double> secondaryAnimation,
-          Widget child,
-        ) {
-          final Animation<Offset> incoming =
-              Tween<Offset>(
-                begin: const Offset(1.0, 0),
-                end: Offset.zero,
-              ).animate(
-                CurvedAnimation(parent: animation, curve: Curves.easeInOutSine),
-              );
-          final Animation<Offset> outgoing =
-              Tween<Offset>(
-                begin: Offset.zero,
-                end: const Offset(-0.38, 0),
-              ).animate(
-                CurvedAnimation(
-                  parent: secondaryAnimation,
-                  curve: Curves.easeInOutSine,
-                ),
-              );
-          final Animation<Offset> incomingParallax =
-              Tween<Offset>(
-                begin: const Offset(0.12, 0),
-                end: Offset.zero,
-              ).animate(
-                CurvedAnimation(parent: animation, curve: Curves.easeInOutSine),
-              );
-          final Animation<double> incomingFade =
-              Tween<double>(begin: 0.94, end: 1).animate(
-                CurvedAnimation(parent: animation, curve: Curves.easeInOutSine),
-              );
+    transitionsBuilder: (
+      BuildContext context,
+      Animation<double> animation,
+      Animation<double> secondaryAnimation,
+      Widget child,
+    ) {
+      return switch (kind) {
+        SessionTransitionKind.start =>
+          _startTrainingTransition(animation, child),
+        SessionTransitionKind.phase ||
+        SessionTransitionKind.done =>
+          _phaseTransition(animation, secondaryAnimation, child),
+      };
+    },
+  );
+}
 
-          return SlideTransition(
-            position: outgoing,
-            child: SlideTransition(
-              position: incoming,
-              child: SlideTransition(
-                position: incomingParallax,
-                child: FadeTransition(opacity: incomingFade, child: child),
-              ),
-            ),
-          );
-        },
+Widget _startTrainingTransition(
+  Animation<double> animation,
+  Widget child,
+) {
+  final fade = Tween<double>(begin: 0.0, end: 1.0).animate(
+    CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+  );
+  final scale = Tween<double>(begin: 0.96, end: 1.0).animate(
+    CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+  );
+  final slide = Tween<Offset>(
+    begin: const Offset(0, 0.035),
+    end: Offset.zero,
+  ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
+
+  return FadeTransition(
+    opacity: fade,
+    child: ScaleTransition(
+      scale: scale,
+      child: SlideTransition(position: slide, child: child),
+    ),
+  );
+}
+
+Widget _phaseTransition(
+  Animation<double> animation,
+  Animation<double> secondaryAnimation,
+  Widget child,
+) {
+  final incoming = Tween<Offset>(
+    begin: const Offset(0.10, 0),
+    end: Offset.zero,
+  ).animate(CurvedAnimation(parent: animation, curve: Curves.easeInOutSine));
+  final outgoing = Tween<Offset>(
+    begin: Offset.zero,
+    end: const Offset(-0.08, 0),
+  ).animate(
+    CurvedAnimation(parent: secondaryAnimation, curve: Curves.easeInOutSine),
+  );
+  final incomingFade = Tween<double>(begin: 0.88, end: 1.0).animate(
+    CurvedAnimation(parent: animation, curve: Curves.easeInOutSine),
+  );
+
+  return SlideTransition(
+    position: outgoing,
+    child: SlideTransition(
+      position: incoming,
+      child: FadeTransition(opacity: incomingFade, child: child),
+    ),
   );
 }

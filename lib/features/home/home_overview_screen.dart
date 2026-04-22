@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ixercise/design_system/theme.dart';
@@ -5,7 +7,7 @@ import 'package:ixercise/domain/models.dart';
 import 'package:ixercise/features/home/home_controller.dart';
 import 'package:ixercise/features/settings/feedback_settings_sheet.dart';
 
-class HomeOverviewScreen extends ConsumerWidget {
+class HomeOverviewScreen extends ConsumerStatefulWidget {
   const HomeOverviewScreen({
     super.key,
     this.onStartTraining,
@@ -16,11 +18,26 @@ class HomeOverviewScreen extends ConsumerWidget {
 
   final ValueChanged<TrainingPlan>? onStartTraining;
   final ValueChanged<TrainingPlan>? onEditTraining;
-  final ValueChanged<TrainingPlan>? onDeleteTraining;
+  final FutureOr<void> Function(TrainingPlan)? onDeleteTraining;
   final VoidCallback? onCreateTraining;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeOverviewScreen> createState() => _HomeOverviewScreenState();
+}
+
+class _HomeOverviewScreenState extends ConsumerState<HomeOverviewScreen> {
+  String? _startingPlanId;
+
+  Future<void> _handleStart(TrainingPlan plan) async {
+    if (_startingPlanId != null) return;
+    setState(() => _startingPlanId = plan.id);
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    widget.onStartTraining?.call(plan);
+    if (mounted) setState(() => _startingPlanId = null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final homeState = ref.watch(homeControllerProvider);
     final List<TrainingPlan> todaysPlans = _plansScheduledToday(homeState);
     final IxThemeColors colors = context.ixColors;
@@ -93,7 +110,7 @@ class HomeOverviewScreen extends ConsumerWidget {
                   const Spacer(),
                   TextButton.icon(
                     key: const Key('home_new_training'),
-                    onPressed: onCreateTraining,
+                    onPressed: widget.onCreateTraining,
                     style: TextButton.styleFrom(
                       foregroundColor: colors.ink,
                       shape: const StadiumBorder(),
@@ -131,55 +148,76 @@ class HomeOverviewScreen extends ConsumerWidget {
                             Divider(height: 1, color: colors.line),
                         itemBuilder: (BuildContext context, int index) {
                           final TrainingPlan plan = homeState.plans[index];
+                          final bool isStarting = _startingPlanId == plan.id;
                           return _SwipeActionRow(
-                            onEdit: () => onEditTraining?.call(plan),
-                            onDelete: () => onDeleteTraining?.call(plan),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              child: Row(
-                                children: <Widget>[
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: <Widget>[
-                                        Text(
-                                          plan.name,
-                                          style: const TextStyle(
-                                            fontSize: 26,
-                                            fontWeight: FontWeight.w600,
-                                            letterSpacing: -0.4,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          '${plan.items.length} exercises · ${_estimatedDuration(plan)} · ${_scheduleLabel(homeState.schedulesByPlanId[plan.id])}',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: colors.mute,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                            onEdit: () => widget.onEditTraining?.call(plan),
+                            onDelete: () =>
+                                widget.onDeleteTraining?.call(plan),
+                            child: AnimatedScale(
+                              scale: isStarting ? 0.985 : 1.0,
+                              duration: const Duration(milliseconds: 150),
+                              curve: Curves.easeOutCubic,
+                              child: AnimatedOpacity(
+                                opacity: isStarting ? 0.72 : 1.0,
+                                duration: const Duration(milliseconds: 150),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
                                   ),
-                                  IconButton(
-                                    key: index == 0
-                                        ? const Key('home_start_training')
-                                        : null,
-                                    onPressed: () =>
-                                        onStartTraining?.call(plan),
-                                    style: IconButton.styleFrom(
-                                      fixedSize: const Size(40, 40),
-                                      backgroundColor: colors.surface,
-                                      foregroundColor: colors.ink,
-                                      side: BorderSide(color: colors.line),
-                                    ),
-                                    icon: const Icon(
-                                      Icons.play_arrow_rounded,
-                                      size: 18,
-                                    ),
+                                  child: Row(
+                                    children: <Widget>[
+                                      Expanded(
+                                        child: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: <Widget>[
+                                            Text(
+                                              plan.name,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 26,
+                                                fontWeight: FontWeight.w600,
+                                                letterSpacing: -0.4,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              '${plan.items.length} exercises · ${_estimatedDuration(plan)} · ${_scheduleLabel(homeState.schedulesByPlanId[plan.id])}',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: colors.mute,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      IconButton(
+                                        key: index == 0
+                                            ? const Key('home_start_training')
+                                            : null,
+                                        onPressed: () => _handleStart(plan),
+                                        style: IconButton.styleFrom(
+                                          fixedSize: const Size(40, 40),
+                                          backgroundColor: isStarting
+                                              ? colors.line
+                                              : colors.surface,
+                                          foregroundColor: colors.ink,
+                                          side:
+                                              BorderSide(color: colors.line),
+                                        ),
+                                        icon: const Icon(
+                                          Icons.play_arrow_rounded,
+                                          size: 18,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
+                                ),
                               ),
                             ),
                           );
@@ -287,7 +325,7 @@ class HomeOverviewScreen extends ConsumerWidget {
     final String type = schedule['type'] as String? ?? 'none';
     final String time = schedule['time'] as String? ?? '';
     if (type == 'alternating') {
-      return time.isEmpty ? 'Alternating days' : 'Alternating days · $time';
+      return time.isEmpty ? 'Custom schedule' : 'Custom · $time';
     }
     if (type == 'weekdays') {
       final List<dynamic> raw =
@@ -306,7 +344,7 @@ class HomeOverviewScreen extends ConsumerWidget {
           .map((int d) => dayNames[d] ?? '')
           .where((String d) => d.isNotEmpty)
           .toList(growable: false);
-      final String dayText = days.isEmpty ? 'Weekdays' : days.join(' · ');
+      final String dayText = days.isEmpty ? 'Custom' : days.join(' · ');
       return time.isEmpty ? dayText : '$dayText · $time';
     }
     return 'Not scheduled';
@@ -322,7 +360,7 @@ class _SwipeActionRow extends StatefulWidget {
 
   final Widget child;
   final VoidCallback? onEdit;
-  final VoidCallback? onDelete;
+  final FutureOr<void> Function()? onDelete;
 
   @override
   State<_SwipeActionRow> createState() => _SwipeActionRowState();
@@ -331,81 +369,112 @@ class _SwipeActionRow extends StatefulWidget {
 class _SwipeActionRowState extends State<_SwipeActionRow> {
   static const double _maxReveal = 126;
   double _drag = 0;
+  bool _deleteInFlight = false;
 
   @override
   Widget build(BuildContext context) {
     final IxThemeColors colors = context.ixColors;
     final double reveal = (-_drag / _maxReveal).clamp(0.0, 1.0);
-    return SizedBox(
-      height: 98,
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
+      alignment: Alignment.topCenter,
       child: ClipRect(
-        child: Stack(
-          children: <Widget>[
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onHorizontalDragUpdate: (DragUpdateDetails details) {
-                final double next = (_drag + details.delta.dx).clamp(
-                  -_maxReveal,
-                  0.0,
-                );
-                setState(() => _drag = next);
-              },
-              onHorizontalDragEnd: (_) {
-                setState(
-                  () =>
-                      _drag = _drag.abs() > _maxReveal * 0.4 ? -_maxReveal : 0,
-                );
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOutCubic,
-                transform: Matrix4.translationValues(_drag, 0, 0),
-                color: colors.background,
-                child: widget.child,
-              ),
-            ),
-            Positioned(
-              top: 0,
-              right: 0,
-              bottom: 0,
-              width: _maxReveal,
-              child: IgnorePointer(
-                ignoring: reveal < 0.18,
-                child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 140),
-                  opacity: reveal,
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        _ActionIcon(
-                          icon: Icons.edit_outlined,
-                          color: colors.ink,
-                          onTap: () {
-                            widget.onEdit?.call();
-                            setState(() => _drag = 0);
+        child: AnimatedSlide(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          offset: _deleteInFlight ? const Offset(-0.08, 0) : Offset.zero,
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 180),
+            opacity: _deleteInFlight ? 0.62 : 1,
+            child: SizedBox(
+              height: 98,
+              child: Stack(
+                children: <Widget>[
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onHorizontalDragUpdate: _deleteInFlight
+                        ? null
+                        : (DragUpdateDetails details) {
+                            final double next = (_drag + details.delta.dx)
+                                .clamp(-_maxReveal, 0.0);
+                            setState(() => _drag = next);
                           },
-                        ),
-                        const SizedBox(width: 8),
-                        _ActionIcon(
-                          icon: Icons.delete_outline,
-                          color: const Color(0xFFE11D2E),
-                          onTap: () {
-                            widget.onDelete?.call();
-                            setState(() => _drag = 0);
+                    onHorizontalDragEnd: _deleteInFlight
+                        ? null
+                        : (_) {
+                            setState(
+                              () => _drag = _drag.abs() > _maxReveal * 0.4
+                                  ? -_maxReveal
+                                  : 0,
+                            );
                           },
-                        ),
-                      ],
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      transform: Matrix4.translationValues(_drag, 0, 0),
+                      color: colors.background,
+                      child: widget.child,
                     ),
                   ),
-                ),
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    width: _maxReveal,
+                    child: IgnorePointer(
+                      ignoring: reveal < 0.18 || _deleteInFlight,
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 140),
+                        opacity: reveal,
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              _ActionIcon(
+                                icon: Icons.edit_outlined,
+                                color: colors.ink,
+                                onTap: () {
+                                  widget.onEdit?.call();
+                                  setState(() => _drag = 0);
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              _ActionIcon(
+                                icon: Icons.delete_outline,
+                                color: const Color(0xFFE11D2E),
+                                active: _deleteInFlight,
+                                onTap: _handleDelete,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
+  }
+
+  Future<void> _handleDelete() async {
+    if (_deleteInFlight || widget.onDelete == null) {
+      return;
+    }
+    setState(() => _deleteInFlight = true);
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    await widget.onDelete?.call();
+    if (mounted) {
+      setState(() {
+        _deleteInFlight = false;
+        _drag = 0;
+      });
+    }
   }
 }
 
@@ -414,27 +483,36 @@ class _ActionIcon extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.onTap,
+    this.active = false,
   });
 
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
+  final bool active;
 
   @override
   Widget build(BuildContext context) {
     final IxThemeColors colors = context.ixColors;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: colors.line),
+    return AnimatedScale(
+      duration: const Duration(milliseconds: 170),
+      curve: Curves.easeOutBack,
+      scale: active ? 0.88 : 1,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 170),
+          curve: Curves.easeOutCubic,
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: active ? color : colors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: active ? color : colors.line),
+          ),
+          child: Icon(icon, size: 18, color: active ? colors.inverse : color),
         ),
-        child: Icon(icon, size: 18, color: color),
       ),
     );
   }

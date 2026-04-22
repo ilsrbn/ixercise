@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:ixercise/app/router.dart';
 import 'package:ixercise/design_system/theme.dart';
 import 'package:ixercise/features/home/home_controller.dart';
+import 'package:ixercise/features/live_activity/live_activity_coordinator.dart';
 import 'package:ixercise/features/notifications/training_reminder_service.dart';
 import 'package:ixercise/features/session/session_controller.dart';
 import 'package:ixercise/features/session/session_feedback_service.dart';
@@ -27,6 +28,7 @@ class IxerciseApp extends ConsumerWidget {
       SessionUiState next,
     ) {
       ref.read(sessionFeedbackServiceProvider).handle(previous, next);
+      unawaited(ref.read(liveActivityCoordinatorProvider).sync(previous, next));
     });
     ref.listen<HomeState>(homeControllerProvider, (
       HomeState? previous,

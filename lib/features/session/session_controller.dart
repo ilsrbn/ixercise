@@ -14,13 +14,13 @@ class SessionUiState {
 class SessionController extends StateNotifier<SessionUiState> {
   SessionController({TrainingPlan? seedPlan})
     : _engine = TrainingSessionEngine(seedPlan ?? _defaultPlan),
-      super(
-        SessionUiState(
-          plan: seedPlan ?? _defaultPlan,
-          session: TrainingSessionEngine(seedPlan ?? _defaultPlan).state,
-        ),
-      ) {
+      super(_initialState(seedPlan ?? _defaultPlan)) {
     _sync();
+  }
+
+  static SessionUiState _initialState(TrainingPlan plan) {
+    final TrainingSessionEngine engine = TrainingSessionEngine(plan);
+    return SessionUiState(plan: plan, session: engine.state);
   }
 
   static const TrainingPlan _defaultPlan = TrainingPlan(
@@ -83,6 +83,11 @@ class SessionController extends StateNotifier<SessionUiState> {
   void startPlan(TrainingPlan plan) {
     _engine.plan = plan;
     _engine.reset();
+    _sync();
+  }
+
+  void reconcileClock({DateTime? now}) {
+    _engine.reconcileTo(now ?? DateTime.now());
     _sync();
   }
 

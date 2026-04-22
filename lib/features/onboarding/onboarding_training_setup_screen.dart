@@ -35,7 +35,7 @@ class _OnboardingTrainingSetupScreenState
     text: 'My First Training',
   );
   final List<_SetupItem> _items = <_SetupItem>[];
-  _ScheduleType _scheduleType = _ScheduleType.none;
+  _ScheduleType _scheduleType = _ScheduleType.off;
   Set<int> _weekdays = <int>{1, 3, 5};
   String _scheduleTime = '07:30';
   bool _seededFromSelection = false;
@@ -52,14 +52,12 @@ class _OnboardingTrainingSetupScreenState
     if (widget.initialSchedule != null) {
       final String type = widget.initialSchedule!['type'] as String? ?? 'none';
       if (type == 'weekdays') {
-        _scheduleType = _ScheduleType.weekdays;
+        _scheduleType = _ScheduleType.custom;
         _weekdays =
             (widget.initialSchedule!['weekdays'] as List<dynamic>? ??
                     <dynamic>[])
                 .whereType<int>()
                 .toSet();
-      } else if (type == 'alternating') {
-        _scheduleType = _ScheduleType.alternating;
       }
       _scheduleTime =
           widget.initialSchedule!['time'] as String? ?? _scheduleTime;
@@ -75,7 +73,7 @@ class _OnboardingTrainingSetupScreenState
 
   bool get _canSave {
     final bool scheduleValid =
-        _scheduleType != _ScheduleType.weekdays || _weekdays.isNotEmpty;
+        _scheduleType != _ScheduleType.custom || _weekdays.isNotEmpty;
     return _nameController.text.trim().isNotEmpty &&
         _items.isNotEmpty &&
         _items.every(
@@ -153,112 +151,130 @@ class _OnboardingTrainingSetupScreenState
                   ),
                 ),
                 const SizedBox(height: 10),
-                _ScheduleCard(
+                _ScheduleSummaryRow(
+                  key: const Key('setup_schedule_row'),
                   scheduleType: _scheduleType,
                   weekdays: _weekdays,
                   time: _scheduleTime,
-                  onTypeChanged: (_ScheduleType type) =>
-                      setState(() => _scheduleType = type),
-                  onToggleWeekday: (int day) {
-                    setState(() {
-                      if (_weekdays.contains(day)) {
-                        _weekdays.remove(day);
-                      } else {
-                        _weekdays.add(day);
-                      }
-                    });
-                  },
-                  onPickTime: () async {
-                    final String? picked = await _pickClock(
-                      context,
-                      _scheduleTime,
-                      'Schedule time',
-                    );
-                    if (picked != null) {
-                      setState(() => _scheduleTime = picked);
-                    }
-                  },
+                  onTap: _openScheduleEditor,
                 ),
                 const SizedBox(height: 14),
-                ...List<Widget>.generate(_items.length, (int index) {
-                  final List<_ExerciseOpt> available = allExercises;
-                  return _ExerciseCard(
-                    title: _nameForId(onboarding, _items[index].exerciseId),
-                    item: _items[index],
-                    onChanged: (_SetupItem next) =>
-                        setState(() => _items[index] = next),
-                    onPickExercise: () async {
-                      final String? picked = await _pickExercise(
-                        context,
-                        available,
-                        _items[index].exerciseId,
-                      );
-                      if (picked != null) {
-                        setState(
-                          () => _items[index] = _items[index].copyWith(
-                            exerciseId: picked,
+                Row(
+                  children: <Widget>[
+                    Text(
+                      'Exercises',
+                      style: TextStyle(
+                        color: colors.ink,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${_items.length}',
+                      style: TextStyle(
+                        color: colors.mute,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ReorderableListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  buildDefaultDragHandles: false,
+                  proxyDecorator:
+                      (Widget child, int index, Animation<double> animation) {
+                        return Material(
+                          color: Colors.transparent,
+                          child: ScaleTransition(
+                            scale: Tween<double>(begin: 1, end: 1.02).animate(
+                              CurvedAnimation(
+                                parent: animation,
+                                curve: Curves.easeOutCubic,
+                              ),
+                            ),
+                            child: child,
                           ),
                         );
+                      },
+                  onReorder: (int oldIndex, int newIndex) {
+                    setState(() {
+                      if (oldIndex < newIndex) {
+                        newIndex -= 1;
                       }
-                    },
-                    onPickWorkDuration: _items[index].mode == ExerciseMode.time
-                        ? () async {
-                            final int? picked = await _pickDuration(
-                              context,
-                              _items[index].value,
-                              'Work duration',
-                            );
-                            if (picked != null && picked > 0) {
-                              setState(
-                                () => _items[index] = _items[index].copyWith(
-                                  value: picked,
-                                ),
-                              );
+                      final _SetupItem moved = _items.removeAt(oldIndex);
+                      _items.insert(newIndex, moved);
+                    });
+                  },
+                  itemCount: _items.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    final _SetupItem item = _items[index];
+                    final String title = _nameForId(
+                      onboarding,
+                      item.exerciseId,
+                    );
+                    final String group = groupForExerciseName(title);
+                    return _SetupSwipeActionRow(
+                      key: ObjectKey(item),
+                      onDelete: _items.length > 1
+                          ? () => setState(() => _items.remove(item))
+                          : null,
+                      child: _ExerciseSummaryCard(
+                        index: index,
+                        title: title,
+                        group: group,
+                        item: item,
+                        onTap: () async {
+                          final _SetupItem? edited = await _editExercise(
+                            context,
+                            allExercises,
+                            item,
+                          );
+                          if (edited != null) {
+                            final int currentIndex = _items.indexOf(item);
+                            if (currentIndex >= 0) {
+                              setState(() => _items[currentIndex] = edited);
                             }
                           }
-                        : null,
-                    onPickRestDuration: () async {
-                      final int? picked = await _pickDuration(
-                        context,
-                        _items[index].restSeconds,
-                        'Rest duration',
-                      );
-                      if (picked != null && picked >= 0) {
-                        setState(
-                          () => _items[index] = _items[index].copyWith(
-                            restSeconds: picked,
+                        },
+                        dragHandle: ReorderableDragStartListener(
+                          index: index,
+                          child: SizedBox(
+                            key: Key('setup_exercise_drag_$index'),
+                            width: 44,
+                            height: 52,
+                            child: Icon(
+                              Icons.drag_indicator_rounded,
+                              size: 22,
+                              color: colors.mute,
+                            ),
                           ),
-                        );
-                      }
-                    },
-                    onSetCountChanged: (int sets) {
-                      setState(
-                        () =>
-                            _items[index] = _items[index].copyWith(sets: sets),
-                      );
-                    },
-                    onRemove: _items.length > 1
-                        ? () => setState(() => _items.removeAt(index))
-                        : null,
-                  );
-                }),
+                        ),
+                      ),
+                    );
+                  },
+                ),
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
                   key: const Key('training_add_exercise'),
                   onPressed: allExercises.isEmpty
                       ? null
-                      : () {
-                          setState(
-                            () => _items.add(
-                              _SetupItem(
-                                exerciseId: allExercises.first.id,
-                                mode: ExerciseMode.reps,
-                                value: 10,
-                                sets: 3,
-                                restSeconds: 20,
-                              ),
+                      : () async {
+                          final _SetupItem? item = await _editExercise(
+                            context,
+                            allExercises,
+                            _SetupItem(
+                              exerciseId: allExercises.first.id,
+                              mode: ExerciseMode.reps,
+                              value: 10,
+                              sets: 3,
+                              restSeconds: 20,
                             ),
                           );
+                          if (item != null) {
+                            setState(() => _items.add(item));
+                          }
                         },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: colors.ink,
@@ -314,15 +330,16 @@ class _OnboardingTrainingSetupScreenState
     );
   }
 
-  Future<String?> _pickExercise(
+  Future<_SetupItem?> _editExercise(
     BuildContext context,
     List<_ExerciseOpt> available,
-    String selectedId,
+    _SetupItem initial,
   ) {
     String query = '';
     String group = 'All';
+    _SetupItem draft = initial;
     String groupFor(_ExerciseOpt e) => groupForExerciseName(e.name);
-    return showModalBottomSheet<String>(
+    return showModalBottomSheet<_SetupItem>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
@@ -340,8 +357,13 @@ class _OnboardingTrainingSetupScreenState
               'All',
               ...available.map(groupFor),
             }.toList(growable: false);
+            final String selectedName = _nameForId(
+              ref.read(onboardingControllerProvider),
+              draft.exerciseId,
+            );
+            final String selectedGroup = groupForExerciseName(selectedName);
             return Container(
-              height: MediaQuery.of(context).size.height * 0.86,
+              height: MediaQuery.of(context).size.height * 0.9,
               decoration: BoxDecoration(
                 color: colors.background,
                 borderRadius: const BorderRadius.vertical(
@@ -361,7 +383,7 @@ class _OnboardingTrainingSetupScreenState
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    'Pick exercise',
+                    'Edit exercise',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
@@ -372,6 +394,7 @@ class _OnboardingTrainingSetupScreenState
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     child: TextField(
+                      key: const Key('exercise_search_input'),
                       onChanged: (v) =>
                           setModalState(() => query = v.trim().toLowerCase()),
                       decoration: InputDecoration(
@@ -439,10 +462,13 @@ class _OnboardingTrainingSetupScreenState
                           ),
                       itemBuilder: (BuildContext context, int index) {
                         final _ExerciseOpt e = filtered[index];
-                        final bool active = e.id == selectedId;
+                        final bool active = e.id == draft.exerciseId;
                         final String exerciseGroup = groupFor(e);
                         return InkWell(
-                          onTap: () => Navigator.of(context).pop(e.id),
+                          key: Key('exercise_option_${e.id}'),
+                          onTap: () => setModalState(
+                            () => draft = draft.copyWith(exerciseId: e.id),
+                          ),
                           borderRadius: BorderRadius.circular(18),
                           child: Container(
                             padding: const EdgeInsets.all(14),
@@ -515,6 +541,190 @@ class _OnboardingTrainingSetupScreenState
                           ),
                         );
                       },
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 18),
+                    decoration: BoxDecoration(
+                      color: colors.background,
+                      border: Border(top: BorderSide(color: colors.line)),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Row(
+                          children: <Widget>[
+                            ExerciseGroupIcon(
+                              group: selectedGroup,
+                              size: 38,
+                              color: colors.ink,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Text(
+                                    selectedName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: colors.ink,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    selectedGroup.toUpperCase(),
+                                    style: TextStyle(
+                                      color: colors.softMute,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              _exerciseSummary(draft),
+                              style: TextStyle(
+                                color: colors.mute,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        _StepperPill(
+                          keyPrefix: 'exercise_sets',
+                          label: 'Sets',
+                          value: draft.sets,
+                          min: 1,
+                          onChanged: (int value) => setModalState(
+                            () => draft = draft.copyWith(sets: value),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(color: colors.line),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                _ModePill(
+                                  key: const Key('exercise_mode_reps'),
+                                  label: 'Reps',
+                                  active: draft.mode == ExerciseMode.reps,
+                                  onTap: () => setModalState(
+                                    () => draft = draft.copyWith(
+                                      mode: ExerciseMode.reps,
+                                    ),
+                                  ),
+                                ),
+                                _ModePill(
+                                  key: const Key('exercise_mode_timer'),
+                                  label: 'Timer',
+                                  active: draft.mode == ExerciseMode.time,
+                                  onTap: () => setModalState(
+                                    () => draft = draft.copyWith(
+                                      mode: ExerciseMode.time,
+                                      value: draft.value < 5 ? 20 : draft.value,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: draft.mode == ExerciseMode.time
+                                  ? _DurationStepperPill(
+                                      keyPrefix: 'exercise_work',
+                                      label: 'Work',
+                                      seconds: draft.value,
+                                      min: 5,
+                                      step: 5,
+                                      onPick: () async {
+                                        final int? picked = await _pickDuration(
+                                          context,
+                                          draft.value,
+                                          'Work duration',
+                                        );
+                                        if (picked != null && picked > 0) {
+                                          setModalState(
+                                            () => draft = draft.copyWith(
+                                              value: picked,
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      onChanged: (int value) => setModalState(
+                                        () => draft = draft.copyWith(
+                                          value: value,
+                                        ),
+                                      ),
+                                    )
+                                  : _StepperPill(
+                                      keyPrefix: 'exercise_reps',
+                                      label: 'Reps',
+                                      value: draft.value,
+                                      min: 1,
+                                      onChanged: (int value) => setModalState(
+                                        () => draft = draft.copyWith(
+                                          value: value,
+                                        ),
+                                      ),
+                                    ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _DurationStepperPill(
+                                keyPrefix: 'exercise_rest',
+                                label: 'Rest',
+                                seconds: draft.restSeconds,
+                                min: 0,
+                                step: 5,
+                                onPick: () async {
+                                  final int? picked = await _pickDuration(
+                                    context,
+                                    draft.restSeconds,
+                                    'Rest duration',
+                                  );
+                                  if (picked != null && picked >= 0) {
+                                    setModalState(
+                                      () => draft = draft.copyWith(
+                                        restSeconds: picked,
+                                      ),
+                                    );
+                                  }
+                                },
+                                onChanged: (int value) => setModalState(
+                                  () => draft = draft.copyWith(
+                                    restSeconds: value,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: IxButton.primary(
+                            key: const Key('exercise_editor_apply'),
+                            label: 'Apply',
+                            onPressed: () => Navigator.of(context).pop(draft),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -632,6 +842,116 @@ class _OnboardingTrainingSetupScreenState
         );
       },
     );
+  }
+
+  Future<void> _openScheduleEditor() async {
+    final _ScheduleDraft? draft = await showModalBottomSheet<_ScheduleDraft>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        _ScheduleType type = _scheduleType;
+        Set<int> weekdays = <int>{..._weekdays};
+        String time = _scheduleTime;
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            final IxThemeColors colors = context.ixColors;
+            return Container(
+              decoration: BoxDecoration(
+                color: colors.background,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(22),
+                ),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 18),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Center(
+                        child: Container(
+                          width: 42,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: colors.line,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Center(
+                        child: Text(
+                          'Schedule',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: colors.ink,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _ScheduleEditorContent(
+                        scheduleType: type,
+                        weekdays: weekdays,
+                        time: time,
+                        onTypeChanged: (_ScheduleType next) =>
+                            setModalState(() => type = next),
+                        onToggleWeekday: (int day) {
+                          setModalState(() {
+                            if (weekdays.contains(day)) {
+                              weekdays = <int>{...weekdays}..remove(day);
+                            } else {
+                              weekdays = <int>{...weekdays, day};
+                            }
+                          });
+                        },
+                        onPickTime: () async {
+                          final String? picked = await _pickClock(
+                            context,
+                            time,
+                            'Reminder time',
+                          );
+                          if (picked != null) {
+                            setModalState(() => time = picked);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 18),
+                      SizedBox(
+                        width: double.infinity,
+                        child: IxButton.primary(
+                          key: const Key('schedule_editor_apply'),
+                          label: 'Apply',
+                          onPressed:
+                              type == _ScheduleType.custom && weekdays.isEmpty
+                              ? null
+                              : () => Navigator.of(context).pop(
+                                  _ScheduleDraft(
+                                    type: type,
+                                    weekdays: weekdays,
+                                    time: time,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+    if (draft != null) {
+      setState(() {
+        _scheduleType = draft.type;
+        _weekdays = draft.weekdays;
+        _scheduleTime = draft.time;
+      });
+    }
   }
 
   Future<String?> _pickClock(
@@ -810,18 +1130,11 @@ class _OnboardingTrainingSetupScreenState
           .toList(growable: false),
     );
     Map<String, dynamic>? schedule;
-    if (_scheduleType == _ScheduleType.weekdays) {
+    if (_scheduleType == _ScheduleType.custom) {
       schedule = <String, dynamic>{
         'type': 'weekdays',
         'weekdays': _weekdays.toList()..sort(),
         'time': _scheduleTime,
-      };
-    } else if (_scheduleType == _ScheduleType.alternating) {
-      schedule = <String, dynamic>{
-        'type': 'alternating',
-        'time': _scheduleTime,
-        'anchorDate':
-            widget.initialSchedule?['anchorDate'] as String? ?? _todayIsoDate(),
       };
     }
     if (widget.initialPlan == null) {
@@ -844,16 +1157,67 @@ class _OnboardingTrainingSetupScreenState
     }
     widget.onSaved?.call();
   }
-
-  String _todayIsoDate() {
-    final DateTime now = DateTime.now();
-    return '${now.year.toString().padLeft(4, '0')}-'
-        '${now.month.toString().padLeft(2, '0')}-'
-        '${now.day.toString().padLeft(2, '0')}';
-  }
 }
 
-enum _ScheduleType { none, weekdays, alternating }
+enum _ScheduleType { off, custom }
+
+class _ScheduleDraft {
+  const _ScheduleDraft({
+    required this.type,
+    required this.weekdays,
+    required this.time,
+  });
+
+  final _ScheduleType type;
+  final Set<int> weekdays;
+  final String time;
+}
+
+String _scheduleSummary(_ScheduleType type, Set<int> weekdays, String time) {
+  if (type == _ScheduleType.off) {
+    return 'Off';
+  }
+  return 'Custom · ${_weekdaySummary(weekdays)} · $time';
+}
+
+String _weekdaySummary(Set<int> weekdays) {
+  const Map<int, String> labels = <int, String>{
+    1: 'M',
+    2: 'T',
+    3: 'W',
+    4: 'T',
+    5: 'F',
+    6: 'S',
+    7: 'S',
+  };
+  final List<int> sorted = weekdays.toList()..sort();
+  if (sorted.isEmpty) {
+    return 'Pick days';
+  }
+  return sorted.map((int day) => labels[day] ?? '').join(' ');
+}
+
+String _exerciseSummary(_SetupItem item) {
+  final String work = item.mode == ExerciseMode.reps
+      ? '${item.value} reps'
+      : '${_secondsShort(item.value)} work';
+  return '${item.sets} sets · $work · ${_secondsShort(item.restSeconds)} rest';
+}
+
+String _secondsShort(int seconds) {
+  if (seconds <= 0) {
+    return '0s';
+  }
+  final int minutes = seconds ~/ 60;
+  final int remainder = seconds % 60;
+  if (minutes == 0) {
+    return '${remainder}s';
+  }
+  if (remainder == 0) {
+    return '${minutes}m';
+  }
+  return '${minutes}m ${remainder}s';
+}
 
 class _ExerciseOpt {
   const _ExerciseOpt(this.id, this.name);
@@ -861,8 +1225,65 @@ class _ExerciseOpt {
   final String name;
 }
 
-class _ScheduleCard extends StatelessWidget {
-  const _ScheduleCard({
+class _ScheduleSummaryRow extends StatelessWidget {
+  const _ScheduleSummaryRow({
+    super.key,
+    required this.scheduleType,
+    required this.weekdays,
+    required this.time,
+    required this.onTap,
+  });
+
+  final _ScheduleType scheduleType;
+  final Set<int> weekdays;
+  final String time;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final IxThemeColors colors = context.ixColors;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Schedule',
+                style: TextStyle(
+                  color: colors.ink,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              Expanded(
+                flex: 2,
+                child: Text(
+                  _scheduleSummary(scheduleType, weekdays, time),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    color: colors.mute,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(Icons.chevron_right_rounded, color: colors.mute),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ScheduleEditorContent extends StatelessWidget {
+  const _ScheduleEditorContent({
     required this.scheduleType,
     required this.weekdays,
     required this.time,
@@ -881,132 +1302,136 @@ class _ScheduleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final IxThemeColors colors = context.ixColors;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colors.line),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const Text('Schedule', style: TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: _ScheduleChoiceBox(
+                key: const Key('schedule_off_choice'),
+                title: 'Off',
+                subtitle: 'No reminders',
+                active: scheduleType == _ScheduleType.off,
+                onTap: () => onTypeChanged(_ScheduleType.off),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _ScheduleChoiceBox(
+                key: const Key('schedule_custom_choice'),
+                title: 'Custom',
+                subtitle: 'Pick days',
+                active: scheduleType == _ScheduleType.custom,
+                onTap: () => onTypeChanged(_ScheduleType.custom),
+              ),
+            ),
+          ],
+        ),
+        if (scheduleType == _ScheduleType.custom) ...<Widget>[
+          const SizedBox(height: 14),
+          Text(
+            'Days',
+            style: TextStyle(
+              color: colors.mute,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
             children: <Widget>[
-              _SchedulePill(
-                label: 'None',
-                active: scheduleType == _ScheduleType.none,
-                onTap: () => onTypeChanged(_ScheduleType.none),
+              _WeekdayChip(
+                key: const Key('schedule_day_1'),
+                day: 1,
+                label: 'M',
+                active: weekdays.contains(1),
+                onTap: onToggleWeekday,
               ),
-              _SchedulePill(
-                label: 'Weekdays',
-                active: scheduleType == _ScheduleType.weekdays,
-                onTap: () => onTypeChanged(_ScheduleType.weekdays),
+              _WeekdayChip(
+                key: const Key('schedule_day_2'),
+                day: 2,
+                label: 'T',
+                active: weekdays.contains(2),
+                onTap: onToggleWeekday,
               ),
-              _SchedulePill(
-                label: 'Alternating',
-                active: scheduleType == _ScheduleType.alternating,
-                onTap: () => onTypeChanged(_ScheduleType.alternating),
+              _WeekdayChip(
+                key: const Key('schedule_day_3'),
+                day: 3,
+                label: 'W',
+                active: weekdays.contains(3),
+                onTap: onToggleWeekday,
+              ),
+              _WeekdayChip(
+                key: const Key('schedule_day_4'),
+                day: 4,
+                label: 'T',
+                active: weekdays.contains(4),
+                onTap: onToggleWeekday,
+              ),
+              _WeekdayChip(
+                key: const Key('schedule_day_5'),
+                day: 5,
+                label: 'F',
+                active: weekdays.contains(5),
+                onTap: onToggleWeekday,
+              ),
+              _WeekdayChip(
+                key: const Key('schedule_day_6'),
+                day: 6,
+                label: 'S',
+                active: weekdays.contains(6),
+                onTap: onToggleWeekday,
+              ),
+              _WeekdayChip(
+                key: const Key('schedule_day_7'),
+                day: 7,
+                label: 'S',
+                active: weekdays.contains(7),
+                onTap: onToggleWeekday,
               ),
             ],
           ),
-          if (scheduleType == _ScheduleType.weekdays) ...<Widget>[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 6,
-              children: <Widget>[
-                _WeekdayChip(
-                  day: 1,
-                  label: 'Mon',
-                  active: weekdays.contains(1),
-                  onTap: onToggleWeekday,
-                ),
-                _WeekdayChip(
-                  day: 2,
-                  label: 'Tue',
-                  active: weekdays.contains(2),
-                  onTap: onToggleWeekday,
-                ),
-                _WeekdayChip(
-                  day: 3,
-                  label: 'Wed',
-                  active: weekdays.contains(3),
-                  onTap: onToggleWeekday,
-                ),
-                _WeekdayChip(
-                  day: 4,
-                  label: 'Thu',
-                  active: weekdays.contains(4),
-                  onTap: onToggleWeekday,
-                ),
-                _WeekdayChip(
-                  day: 5,
-                  label: 'Fri',
-                  active: weekdays.contains(5),
-                  onTap: onToggleWeekday,
-                ),
-                _WeekdayChip(
-                  day: 6,
-                  label: 'Sat',
-                  active: weekdays.contains(6),
-                  onTap: onToggleWeekday,
-                ),
-                _WeekdayChip(
-                  day: 7,
-                  label: 'Sun',
-                  active: weekdays.contains(7),
-                  onTap: onToggleWeekday,
-                ),
-              ],
-            ),
-          ],
-          if (scheduleType != _ScheduleType.none) ...<Widget>[
-            const SizedBox(height: 10),
-            InkWell(
+          const SizedBox(height: 14),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
               onTap: onPickTime,
               borderRadius: BorderRadius.circular(10),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: colors.line),
-                ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
                 child: Row(
                   children: <Widget>[
-                    Text('Time', style: TextStyle(color: colors.mute)),
+                    Text('Reminder', style: TextStyle(color: colors.mute)),
                     const Spacer(),
                     Text(
                       time,
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(width: 6),
-                    const Icon(Icons.unfold_more, size: 16),
+                    Icon(Icons.chevron_right_rounded, color: colors.mute),
                   ],
                 ),
               ),
             ),
-          ],
+          ),
         ],
-      ),
+      ],
     );
   }
 }
 
-class _SchedulePill extends StatelessWidget {
-  const _SchedulePill({
-    required this.label,
+class _ScheduleChoiceBox extends StatelessWidget {
+  const _ScheduleChoiceBox({
+    super.key,
+    required this.title,
+    required this.subtitle,
     required this.active,
     required this.onTap,
   });
 
-  final String label;
+  final String title;
+  final String subtitle;
   final bool active;
   final VoidCallback onTap;
 
@@ -1015,20 +1440,38 @@ class _SchedulePill extends StatelessWidget {
     final IxThemeColors colors = context.ixColors;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        constraints: const BoxConstraints(minHeight: 66),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(12),
           color: active ? colors.ink : colors.surface,
           border: Border.all(color: active ? colors.ink : colors.line),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: active ? colors.inverse : colors.ink,
-            fontWeight: FontWeight.w600,
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Text(
+              title,
+              style: TextStyle(
+                color: active ? colors.inverse : colors.ink,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              subtitle,
+              style: TextStyle(
+                color: active
+                    ? colors.inverse.withValues(alpha: 0.7)
+                    : colors.mute,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1037,6 +1480,7 @@ class _SchedulePill extends StatelessWidget {
 
 class _WeekdayChip extends StatelessWidget {
   const _WeekdayChip({
+    super.key,
     required this.day,
     required this.label,
     required this.active,
@@ -1051,15 +1495,19 @@ class _WeekdayChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final IxThemeColors colors = context.ixColors;
+    final Color inactiveFill =
+        Color.lerp(colors.surface, colors.line, 0.38) ?? colors.surface;
     return InkWell(
       onTap: () => onTap(day),
       borderRadius: BorderRadius.circular(999),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        width: 36,
+        height: 36,
+        alignment: Alignment.center,
+        margin: const EdgeInsets.only(right: 6),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(999),
-          color: active ? colors.accent : colors.surface,
-          border: Border.all(color: active ? colors.accent : colors.line),
+          color: active ? colors.accent : inactiveFill,
         ),
         child: Text(
           label,
@@ -1074,121 +1522,264 @@ class _WeekdayChip extends StatelessWidget {
   }
 }
 
-class _ExerciseCard extends StatelessWidget {
-  const _ExerciseCard({
-    required this.title,
-    required this.item,
-    required this.onChanged,
-    required this.onPickExercise,
-    required this.onPickRestDuration,
-    required this.onSetCountChanged,
-    this.onPickWorkDuration,
-    this.onRemove,
-  });
+class _SetupSwipeActionRow extends StatefulWidget {
+  const _SetupSwipeActionRow({super.key, required this.child, this.onDelete});
 
-  final String title;
-  final _SetupItem item;
-  final ValueChanged<_SetupItem> onChanged;
-  final VoidCallback onPickExercise;
-  final VoidCallback onPickRestDuration;
-  final ValueChanged<int> onSetCountChanged;
-  final VoidCallback? onPickWorkDuration;
-  final VoidCallback? onRemove;
+  final Widget child;
+  final VoidCallback? onDelete;
+
+  @override
+  State<_SetupSwipeActionRow> createState() => _SetupSwipeActionRowState();
+}
+
+class _SetupSwipeActionRowState extends State<_SetupSwipeActionRow> {
+  static const double _maxReveal = 60;
+  double _drag = 0;
+  bool _isDeleting = false;
+  bool _isCollapsed = false;
 
   @override
   Widget build(BuildContext context) {
     final IxThemeColors colors = context.ixColors;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colors.line),
+    final double reveal = (-_drag / _maxReveal).clamp(0.0, 1.0);
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
+      alignment: Alignment.topCenter,
+      child: ClipRect(
+        child: SizedBox(
+          height: _isCollapsed ? 0 : 108,
+          child: AnimatedSlide(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            offset: _isDeleting ? const Offset(-0.16, 0) : Offset.zero,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 180),
+              opacity: _isDeleting ? 0 : 1,
+              child: Stack(
+                children: <Widget>[
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    left: 0,
+                    bottom: 0,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onHorizontalDragUpdate: _isDeleting
+                          ? null
+                          : (DragUpdateDetails details) {
+                              final double next = (_drag + details.delta.dx)
+                                  .clamp(-_maxReveal, 0.0);
+                              setState(() => _drag = next);
+                            },
+                      onHorizontalDragEnd: _isDeleting
+                          ? null
+                          : (_) {
+                              setState(
+                                () => _drag = _drag.abs() > _maxReveal * 0.4
+                                    ? -_maxReveal
+                                    : 0,
+                              );
+                            },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        transform: Matrix4.translationValues(_drag, 0, 0),
+                        color: colors.background,
+                        child: widget.child,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 4,
+                    right: 0,
+                    bottom: 8,
+                    width: _maxReveal,
+                    child: IgnorePointer(
+                      ignoring:
+                          reveal < 0.18 ||
+                          widget.onDelete == null ||
+                          _isDeleting,
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 140),
+                        opacity: reveal,
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: _ActionIcon(
+                            key: const Key('setup_exercise_delete_action'),
+                            icon: Icons.delete_outline,
+                            color: widget.onDelete == null
+                                ? colors.softMute
+                                : colors.accent,
+                            active: _isDeleting,
+                            onTap: widget.onDelete == null
+                                ? null
+                                : _handleDelete,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
-              IconButton(
-                tooltip: 'Change exercise',
-                onPressed: onPickExercise,
-                icon: const Icon(Icons.swap_horiz_rounded, size: 20),
-              ),
-              if (onRemove != null)
-                IconButton(
-                  onPressed: onRemove,
-                  icon: const Icon(Icons.close, size: 18),
-                ),
-            ],
+    );
+  }
+
+  Future<void> _handleDelete() async {
+    if (_isDeleting || widget.onDelete == null) {
+      return;
+    }
+    setState(() {
+      _isDeleting = true;
+      _drag = -_maxReveal;
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 180));
+    if (!mounted) {
+      return;
+    }
+    setState(() => _isCollapsed = true);
+    await Future<void>.delayed(const Duration(milliseconds: 240));
+    widget.onDelete?.call();
+  }
+}
+
+class _ActionIcon extends StatelessWidget {
+  const _ActionIcon({
+    super.key,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    this.active = false,
+  });
+
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onTap;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final IxThemeColors colors = context.ixColors;
+    return AnimatedScale(
+      duration: const Duration(milliseconds: 170),
+      curve: Curves.easeOutBack,
+      scale: active ? 0.88 : 1,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 170),
+          curve: Curves.easeOutCubic,
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: active ? color : colors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: active ? color : colors.line),
           ),
-          const SizedBox(height: 4),
-          _StepperPill(
-            label: 'Sets',
-            value: item.sets,
-            min: 1,
-            onChanged: onSetCountChanged,
-          ),
-          const SizedBox(height: 10),
-          Container(
+          child: Icon(icon, size: 18, color: active ? colors.inverse : color),
+        ),
+      ),
+    );
+  }
+}
+
+class _ExerciseSummaryCard extends StatelessWidget {
+  const _ExerciseSummaryCard({
+    required this.index,
+    required this.title,
+    required this.group,
+    required this.item,
+    required this.onTap,
+    required this.dragHandle,
+  });
+
+  final int index;
+  final String title;
+  final String group;
+  final _SetupItem item;
+  final VoidCallback onTap;
+  final Widget dragHandle;
+
+  @override
+  Widget build(BuildContext context) {
+    final IxThemeColors colors = context.ixColors;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(color: colors.line),
             ),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                _ModePill(
-                  label: 'Reps',
-                  active: item.mode == ExerciseMode.reps,
-                  onTap: () =>
-                      onChanged(item.copyWith(mode: ExerciseMode.reps)),
+                SizedBox(
+                  width: 28,
+                  child: Text(
+                    (index + 1).toString().padLeft(2, '0'),
+                    style: TextStyle(
+                      color: colors.softMute,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
-                _ModePill(
-                  label: 'Timer',
-                  active: item.mode == ExerciseMode.time,
-                  onTap: () =>
-                      onChanged(item.copyWith(mode: ExerciseMode.time)),
+                const SizedBox(width: 8),
+                ExerciseGroupIcon(group: group, size: 36, color: colors.ink),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: colors.ink,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        group.toUpperCase(),
+                        style: TextStyle(
+                          color: colors.softMute,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _exerciseSummary(item),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: colors.mute,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                dragHandle,
               ],
             ),
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: item.mode == ExerciseMode.time
-                    ? _DurationChip(
-                        label: 'Work',
-                        seconds: item.value,
-                        onTap: onPickWorkDuration!,
-                      )
-                    : _StepperPill(
-                        label: 'Reps',
-                        value: item.value,
-                        min: 1,
-                        onChanged: (int value) =>
-                            onChanged(item.copyWith(value: value)),
-                      ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _DurationChip(
-                  label: 'Rest',
-                  seconds: item.restSeconds,
-                  onTap: onPickRestDuration,
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1196,6 +1787,7 @@ class _ExerciseCard extends StatelessWidget {
 
 class _ModePill extends StatelessWidget {
   const _ModePill({
+    super.key,
     required this.label,
     required this.active,
     required this.onTap,
@@ -1229,40 +1821,53 @@ class _ModePill extends StatelessWidget {
   }
 }
 
-class _DurationChip extends StatelessWidget {
-  const _DurationChip({
+class _DurationStepperPill extends StatelessWidget {
+  const _DurationStepperPill({
+    this.keyPrefix,
     required this.label,
     required this.seconds,
-    required this.onTap,
+    required this.min,
+    required this.step,
+    required this.onPick,
+    required this.onChanged,
   });
 
+  final String? keyPrefix;
   final String label;
   final int seconds;
-  final VoidCallback onTap;
+  final int min;
+  final int step;
+  final VoidCallback onPick;
+  final ValueChanged<int> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final IxThemeColors colors = context.ixColors;
-    final int m = seconds ~/ 60;
-    final int s = seconds % 60;
-    final String text =
-        '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: colors.line),
-        ),
-        child: Row(
-          children: <Widget>[
-            Expanded(
+    final bool canDecrease = seconds > min;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.line),
+      ),
+      child: Row(
+        children: <Widget>[
+          _MiniAdjust(
+            key: keyPrefix == null ? null : Key('${keyPrefix}_decrement'),
+            label: '−',
+            onTap: canDecrease
+                ? () => onChanged((seconds - step).clamp(min, 3599).toInt())
+                : null,
+          ),
+          Expanded(
+            child: InkWell(
+              key: keyPrefix == null ? null : Key('${keyPrefix}_pick'),
+              onTap: onPick,
+              borderRadius: BorderRadius.circular(10),
               child: Column(
                 children: <Widget>[
                   Text(
-                    text,
+                    _secondsClock(seconds),
                     style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 16,
@@ -1275,22 +1880,34 @@ class _DurationChip extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.unfold_more, size: 16),
-          ],
-        ),
+          ),
+          _MiniAdjust(
+            key: keyPrefix == null ? null : Key('${keyPrefix}_increment'),
+            label: '+',
+            onTap: () => onChanged((seconds + step).clamp(min, 3599).toInt()),
+          ),
+        ],
       ),
     );
   }
 }
 
+String _secondsClock(int seconds) {
+  final int m = seconds ~/ 60;
+  final int s = seconds % 60;
+  return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+}
+
 class _StepperPill extends StatelessWidget {
   const _StepperPill({
+    this.keyPrefix,
     required this.label,
     required this.value,
     required this.min,
     required this.onChanged,
   });
 
+  final String? keyPrefix;
   final String label;
   final int value;
   final int min;
@@ -1308,6 +1925,7 @@ class _StepperPill extends StatelessWidget {
       child: Row(
         children: <Widget>[
           _MiniAdjust(
+            key: keyPrefix == null ? null : Key('${keyPrefix}_decrement'),
             label: '−',
             onTap: value > min ? () => onChanged(value - 1) : null,
           ),
@@ -1325,7 +1943,11 @@ class _StepperPill extends StatelessWidget {
               ],
             ),
           ),
-          _MiniAdjust(label: '+', onTap: () => onChanged(value + 1)),
+          _MiniAdjust(
+            key: keyPrefix == null ? null : Key('${keyPrefix}_increment'),
+            label: '+',
+            onTap: () => onChanged(value + 1),
+          ),
         ],
       ),
     );
@@ -1333,7 +1955,7 @@ class _StepperPill extends StatelessWidget {
 }
 
 class _MiniAdjust extends StatelessWidget {
-  const _MiniAdjust({required this.label, this.onTap});
+  const _MiniAdjust({super.key, required this.label, this.onTap});
 
   final String label;
   final VoidCallback? onTap;

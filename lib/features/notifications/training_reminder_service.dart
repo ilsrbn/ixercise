@@ -174,14 +174,58 @@ class TrainingReminderService implements TrainingReminderCoordinator {
       final TimezoneInfo info = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(info.identifier));
     } catch (_) {
-      tz.setLocalLocation(tz.UTC);
+      tz.setLocalLocation(_fallbackLocationForDeviceOffset());
     }
     return tz.local;
   }
+
+  tz.Location _fallbackLocationForDeviceOffset() {
+    final Duration offset = DateTime.now().timeZoneOffset;
+    return tz.getLocation(fallbackZoneNameForOffset(offset));
+  }
 }
+
+@visibleForTesting
+String fallbackZoneNameForOffset(Duration offset) {
+  final int minutes = offset.inMinutes;
+  const Map<int, String> knownOffsetZones = <int, String>{
+    -570: 'Pacific/Marquesas',
+    -210: 'America/St_Johns',
+    270: 'Asia/Kabul',
+    330: 'Asia/Kolkata',
+    345: 'Asia/Kathmandu',
+    390: 'Asia/Yangon',
+    525: 'Australia/Eucla',
+    570: 'Australia/Darwin',
+    630: 'Australia/Lord_Howe',
+    765: 'Pacific/Chatham',
+  };
+  final String? known = knownOffsetZones[minutes];
+  if (known != null) {
+    return known;
+  }
+
+  if (minutes % 60 == 0) {
+    final int hours = minutes ~/ 60;
+    if (hours == 0) {
+      return 'Etc/GMT';
+    }
+    if (hours >= -12 && hours <= 14) {
+      // POSIX Etc/GMT signs are inverted: UTC+3 is Etc/GMT-3.
+      return hours > 0 ? 'Etc/GMT-$hours' : 'Etc/GMT+${hours.abs()}';
+    }
+  }
+
+  return 'UTC';
+}
+
+final _trainingReminderServiceConcreteProvider =
+    Provider<TrainingReminderService>((ref) {
+      return TrainingReminderService(ref);
+    });
 
 final trainingReminderServiceProvider = Provider<TrainingReminderCoordinator>((
   ref,
 ) {
-  return TrainingReminderService(ref);
+  return ref.watch(_trainingReminderServiceConcreteProvider);
 });

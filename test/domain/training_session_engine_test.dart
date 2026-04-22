@@ -60,6 +60,95 @@ void main() {
     expect(engine.state.remainingSeconds, isNull);
   });
 
+  test(
+    'wall-clock reconciliation advances timed exercise while app is locked',
+    () {
+      final DateTime startedAt = DateTime(2026, 4, 22, 14, 0);
+      final plan = TrainingPlan(
+        id: 'p-clock',
+        name: 'Clock',
+        items: const [
+          TrainingExercise(
+            exerciseId: 'jump',
+            mode: ExerciseMode.time,
+            value: 30,
+            restSeconds: 10,
+          ),
+          TrainingExercise(
+            exerciseId: 'push',
+            mode: ExerciseMode.reps,
+            value: 10,
+            restSeconds: 0,
+          ),
+        ],
+      );
+
+      final engine = TrainingSessionEngine(plan, startedAt: startedAt);
+      engine.reconcileTo(startedAt.add(const Duration(seconds: 35)));
+
+      expect(engine.state.status, SessionStatus.resting);
+      expect(engine.state.remainingSeconds, 5);
+      expect(engine.state.elapsedSeconds, 35);
+    },
+  );
+
+  test('wall-clock reconciliation can cross rest into next exercise', () {
+    final DateTime startedAt = DateTime(2026, 4, 22, 14, 0);
+    final plan = TrainingPlan(
+      id: 'p-cross',
+      name: 'Cross',
+      items: const [
+        TrainingExercise(
+          exerciseId: 'jump',
+          mode: ExerciseMode.time,
+          value: 30,
+          restSeconds: 10,
+        ),
+        TrainingExercise(
+          exerciseId: 'push',
+          mode: ExerciseMode.reps,
+          value: 10,
+          restSeconds: 0,
+        ),
+      ],
+    );
+
+    final engine = TrainingSessionEngine(plan, startedAt: startedAt);
+    engine.reconcileTo(startedAt.add(const Duration(seconds: 45)));
+
+    expect(engine.state.status, SessionStatus.running);
+    expect(engine.state.currentIndex, 1);
+    expect(engine.state.remainingSeconds, isNull);
+    expect(engine.state.elapsedSeconds, 45);
+  });
+
+  test('paused wall-clock time does not consume timer', () {
+    final DateTime startedAt = DateTime(2026, 4, 22, 14, 0);
+    final plan = TrainingPlan(
+      id: 'p-pause',
+      name: 'Pause',
+      items: const [
+        TrainingExercise(
+          exerciseId: 'jump',
+          mode: ExerciseMode.time,
+          value: 30,
+          restSeconds: 0,
+        ),
+      ],
+    );
+
+    final engine = TrainingSessionEngine(plan, startedAt: startedAt);
+    final DateTime pausedAt = startedAt.add(const Duration(seconds: 5));
+    engine.pause(now: pausedAt);
+    engine.reconcileTo(pausedAt.add(const Duration(minutes: 10)));
+    engine.resume(now: pausedAt.add(const Duration(minutes: 10)));
+    engine.reconcileTo(pausedAt.add(const Duration(minutes: 10, seconds: 5)));
+
+    expect(engine.state.status, SessionStatus.running);
+    expect(engine.state.remainingSeconds, 20);
+    expect(engine.state.elapsedSeconds, 10);
+  });
+
   test('reps item requires manual completion and then ends session', () {
     final plan = TrainingPlan(
       id: 'p3',

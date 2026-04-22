@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ixercise/design_system/ix_animated_timer_text.dart';
+import 'package:ixercise/design_system/ix_phase_transition.dart';
 import 'package:ixercise/domain/models.dart';
 import 'package:ixercise/design_system/ix_progress_bar.dart';
 import 'package:ixercise/features/onboarding/exercise_catalog.dart';
@@ -25,24 +26,31 @@ class RestScreen extends ConsumerStatefulWidget {
   ConsumerState<RestScreen> createState() => _RestScreenState();
 }
 
-class _RestScreenState extends ConsumerState<RestScreen> {
+class _RestScreenState extends ConsumerState<RestScreen>
+    with WidgetsBindingObserver {
   Timer? _ticker;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      final SessionUiState state = ref.read(sessionControllerProvider);
-      if (state.session.status == SessionStatus.resting) {
-        ref.read(sessionControllerProvider.notifier).tick();
-      }
+      ref.read(sessionControllerProvider.notifier).reconcileClock();
     });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _ticker?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.read(sessionControllerProvider.notifier).reconcileClock();
+    }
   }
 
   @override
@@ -110,114 +118,130 @@ class _RestScreenState extends ConsumerState<RestScreen> {
               ),
             ),
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    IxAnimatedTimerText(
-                      text: '$remaining',
-                      style: const TextStyle(
-                        fontSize: 150,
-                        height: 0.9,
-                        color: Colors.white,
-                        letterSpacing: -2,
-                        fontWeight: FontWeight.w500,
+              child: IxPhaseSwitcher(
+                phaseKey: ValueKey<String>(
+                  'rest-${state.session.currentIndex}',
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      IxAnimatedTimerText(
+                        text: '$remaining',
+                        style: const TextStyle(
+                          fontSize: 150,
+                          height: 0.9,
+                          color: Colors.white,
+                          letterSpacing: -2,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'SECONDS',
-                      style: TextStyle(
-                        fontSize: 12,
-                        letterSpacing: 1.4,
-                        color: Color(0x88FFFFFF),
-                        fontWeight: FontWeight.w600,
+                      const SizedBox(height: 12),
+                      const Text(
+                        'SECONDS',
+                        style: TextStyle(
+                          fontSize: 12,
+                          letterSpacing: 1.4,
+                          color: Color(0x88FFFFFF),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    IxProgressBar(value: progress, height: 3),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        _AdjustButton(
-                          label: '-15s',
-                          onPressed: () => controller.adjustRestSeconds(-15),
-                        ),
-                        const SizedBox(width: 8),
-                        _AdjustButton(
-                          label: '-5s',
-                          onPressed: () => controller.adjustRestSeconds(-5),
-                        ),
-                        const SizedBox(width: 8),
-                        _AdjustButton(
-                          label: '+5s',
-                          onPressed: () => controller.adjustRestSeconds(5),
-                        ),
-                        const SizedBox(width: 8),
-                        _AdjustButton(
-                          label: '+15s',
-                          onPressed: () => controller.adjustRestSeconds(15),
-                        ),
-                      ],
-                    ),
-                  ],
+                      const SizedBox(height: 24),
+                      IxProgressBar(value: progress, height: 3),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          _AdjustButton(
+                            label: '-15s',
+                            onPressed: () =>
+                                controller.adjustRestSeconds(-15),
+                          ),
+                          const SizedBox(width: 8),
+                          _AdjustButton(
+                            label: '-5s',
+                            onPressed: () => controller.adjustRestSeconds(-5),
+                          ),
+                          const SizedBox(width: 8),
+                          _AdjustButton(
+                            label: '+5s',
+                            onPressed: () => controller.adjustRestSeconds(5),
+                          ),
+                          const SizedBox(width: 8),
+                          _AdjustButton(
+                            label: '+15s',
+                            onPressed: () =>
+                                controller.adjustRestSeconds(15),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-            if (next != null)
-              Container(
-                margin: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0x22FFFFFF)),
-                ),
-                child: Row(
-                  children: <Widget>[
-                    Container(
-                      width: 48,
-                      height: 48,
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 280),
+              child: next != null
+                  ? Container(
+                      key: ValueKey<String>(
+                        'rest-next-${next.exerciseId}-${state.session.currentIndex}',
+                      ),
+                      margin: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+                      padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
-                        color: const Color(0x14FFFFFF),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0x22FFFFFF)),
                       ),
-                      child: ExerciseGroupIcon(
-                        group: groupForExerciseId(next.exerciseId),
-                        size: 30,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
                         children: <Widget>[
-                          const Text(
-                            'NEXT UP',
-                            style: TextStyle(
-                              fontSize: 10,
-                              letterSpacing: 1.3,
-                              color: Color(0x88FFFFFF),
-                              fontWeight: FontWeight.w600,
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: const Color(0x14FFFFFF),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: ExerciseGroupIcon(
+                              group: groupForExerciseId(next.exerciseId),
+                              size: 30,
+                              color: Colors.white,
                             ),
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            next.exerciseId,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 18,
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                const Text(
+                                  'NEXT UP',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    letterSpacing: 1.3,
+                                    color: Color(0x88FFFFFF),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  next.exerciseId,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
+                    )
+                  : const SizedBox.shrink(
+                      key: ValueKey<String>('rest-next-none'),
                     ),
-                  ],
-                ),
-              ),
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
               child: Row(

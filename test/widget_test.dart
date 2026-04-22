@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ixercise/data/local_store.dart';
 import 'package:ixercise/domain/models.dart';
+import 'package:ixercise/features/live_activity/live_activity_coordinator.dart';
 import 'package:ixercise/features/notifications/training_reminder_service.dart';
+import 'package:ixercise/features/session/session_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:ixercise/app/shell.dart';
@@ -57,6 +59,9 @@ ProviderScope _app() {
       trainingReminderServiceProvider.overrideWithValue(
         const _FakeTrainingReminderCoordinator(),
       ),
+      liveActivityCoordinatorProvider.overrideWithValue(
+        const _FakeLiveActivityCoordinator(),
+      ),
     ],
     child: IxerciseApp(),
   );
@@ -70,4 +75,11 @@ class _FakeTrainingReminderCoordinator implements TrainingReminderCoordinator {
     required List<TrainingPlan> plans,
     required Map<String, Map<String, dynamic>> schedulesByPlanId,
   }) async {}
+}
+
+class _FakeLiveActivityCoordinator implements LiveActivityCoordinator {
+  const _FakeLiveActivityCoordinator();
+
+  @override
+  Future<void> sync(SessionUiState? previous, SessionUiState next) async {}
 }

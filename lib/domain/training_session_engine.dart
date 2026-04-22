@@ -5,23 +5,25 @@ class TrainingSessionEngine {
     : assert(
         _plan.items.isNotEmpty,
         'Training plan must have at least one item',
-      ),
-      _startedAt = startedAt ?? DateTime.now(),
-      state = SessionState(
-        planId: _plan.id,
-        currentIndex: 0,
-        status: SessionStatus.running,
-        remainingSeconds: _plan.items.first.mode == ExerciseMode.time
-            ? _plan.items.first.value
-            : null,
-        startedAt: startedAt ?? DateTime.now(),
-        elapsedSeconds: 0,
-      );
+      ) {
+    final DateTime initialTime = startedAt ?? DateTime.now();
+    _lastReconciledAt = initialTime;
+    state = SessionState(
+      planId: _plan.id,
+      currentIndex: 0,
+      status: SessionStatus.running,
+      remainingSeconds: _plan.items.first.mode == ExerciseMode.time
+          ? _plan.items.first.value
+          : null,
+      startedAt: initialTime,
+      elapsedSeconds: 0,
+    );
+  }
 
   TrainingPlan _plan;
-  DateTime _startedAt;
+  late DateTime _lastReconciledAt;
   SessionStatus? _pausedFromStatus;
-  SessionState state;
+  late SessionState state;
 
   TrainingPlan get plan => _plan;
   set plan(TrainingPlan value) {
@@ -32,8 +34,9 @@ class TrainingSessionEngine {
 
   bool get isDone => state.status == SessionStatus.done;
 
-  void reset() {
-    _startedAt = DateTime.now();
+  void reset({DateTime? now}) {
+    final DateTime resetAt = now ?? DateTime.now();
+    _lastReconciledAt = resetAt;
     _pausedFromStatus = null;
     state = SessionState(
       planId: _plan.id,
@@ -42,9 +45,24 @@ class TrainingSessionEngine {
       remainingSeconds: _plan.items.first.mode == ExerciseMode.time
           ? _plan.items.first.value
           : null,
-      startedAt: _startedAt,
+      startedAt: resetAt,
       elapsedSeconds: 0,
     );
+  }
+
+  void reconcileTo(DateTime now) {
+    if (isDone || state.status == SessionStatus.paused) {
+      _lastReconciledAt = now;
+      return;
+    }
+
+    final int seconds = now.difference(_lastReconciledAt).inSeconds;
+    if (seconds <= 0) {
+      return;
+    }
+
+    tick(seconds: seconds);
+    _lastReconciledAt = _lastReconciledAt.add(Duration(seconds: seconds));
   }
 
   void tick({required int seconds}) {
@@ -129,12 +147,15 @@ class TrainingSessionEngine {
     }
   }
 
-  void pause() {
+  void pause({DateTime? now}) {
     if (isDone || state.status == SessionStatus.paused) {
       return;
     }
+    final DateTime pausedAt = now ?? DateTime.now();
+    reconcileTo(pausedAt);
     _pausedFromStatus = state.status;
     state = state.copyWith(status: SessionStatus.paused);
+    _lastReconciledAt = pausedAt;
   }
 
   void endSession() {
@@ -149,7 +170,7 @@ class TrainingSessionEngine {
     _pausedFromStatus = null;
   }
 
-  void resume() {
+  void resume({DateTime? now}) {
     if (isDone || state.status != SessionStatus.paused) {
       return;
     }
@@ -162,6 +183,7 @@ class TrainingSessionEngine {
             : _statusForRemaining(remaining));
     _pausedFromStatus = null;
     state = state.copyWith(status: nextStatus);
+    _lastReconciledAt = now ?? DateTime.now();
   }
 
   SessionStatus _statusForRemaining(int remaining) {
