@@ -40,4 +40,9 @@ post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
   end
+
+  # objective_c 9.x ships a pre-signed XCFramework; strip it so Xcode can re-sign for device
+  Dir.glob("#{installer.sandbox.root}/**/objective_c.framework/objective_c").each do |binary|
+    system("codesign --remove-signature '#{binary}'") if File.exist?(binary)
+  end
 end
