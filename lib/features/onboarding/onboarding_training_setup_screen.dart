@@ -9,6 +9,8 @@ import 'package:ixercise/features/home/home_controller.dart';
 import 'package:ixercise/features/onboarding/exercise_catalog.dart';
 import 'package:ixercise/features/onboarding/onboarding_controller.dart';
 import 'package:ixercise/features/onboarding/exercise_group_icon.dart';
+import 'package:ixercise/features/settings/locale_controller.dart';
+import 'package:ixercise/l10n/app_localizations.dart';
 
 class OnboardingTrainingSetupScreen extends ConsumerStatefulWidget {
   const OnboardingTrainingSetupScreen({
@@ -38,8 +40,6 @@ class _OnboardingTrainingSetupScreenState
   _ScheduleType _scheduleType = _ScheduleType.off;
   Set<int> _weekdays = <int>{1, 3, 5};
   String _scheduleTime = '07:30';
-  bool _seededFromSelection = false;
-
   @override
   void initState() {
     super.initState();
@@ -88,21 +88,8 @@ class _OnboardingTrainingSetupScreenState
     final List<_ExerciseOpt> allExercises = onboarding.exercises
         .map((exercise) => _ExerciseOpt(exercise.id, exercise.name))
         .toList(growable: false);
+    final AppLocalizations l10n = ref.watch(appStringsProvider);
     final IxThemeColors colors = context.ixColors;
-    if (!_seededFromSelection && _items.isEmpty && allExercises.isNotEmpty) {
-      _seededFromSelection = true;
-      _items
-        ..clear()
-        ..addAll(<_SetupItem>[
-          _SetupItem(
-            exerciseId: allExercises.first.id,
-            mode: ExerciseMode.reps,
-            value: 10,
-            sets: 3,
-            restSeconds: 20,
-          ),
-        ]);
-    }
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -113,7 +100,7 @@ class _OnboardingTrainingSetupScreenState
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 140),
               children: <Widget>[
                 Text(
-                  'Set up your\ntraining flow.',
+                  l10n.setupTitle,
                   style: TextStyle(
                     fontSize: 42,
                     letterSpacing: -1.2,
@@ -124,7 +111,7 @@ class _OnboardingTrainingSetupScreenState
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Order exercises, choose reps or timer, and set rest between items.',
+                  l10n.setupSubtitle,
                   style: TextStyle(
                     fontSize: 15,
                     color: colors.mute,
@@ -136,7 +123,7 @@ class _OnboardingTrainingSetupScreenState
                   key: const Key('training_name_input'),
                   controller: _nameController,
                   decoration: InputDecoration(
-                    hintText: 'Training name',
+                    hintText: l10n.trainingName,
                     hintStyle: TextStyle(color: colors.softMute),
                     filled: true,
                     fillColor: colors.surface,
@@ -157,12 +144,13 @@ class _OnboardingTrainingSetupScreenState
                   weekdays: _weekdays,
                   time: _scheduleTime,
                   onTap: _openScheduleEditor,
+                  l10n: l10n,
                 ),
                 const SizedBox(height: 14),
                 Row(
                   children: <Widget>[
                     Text(
-                      'Exercises',
+                      l10n.exercisesHeader,
                       style: TextStyle(
                         color: colors.ink,
                         fontWeight: FontWeight.w700,
@@ -217,9 +205,7 @@ class _OnboardingTrainingSetupScreenState
                     final String group = groupForExerciseName(title);
                     return _SetupSwipeActionRow(
                       key: ObjectKey(item),
-                      onDelete: _items.length > 1
-                          ? () => setState(() => _items.remove(item))
-                          : null,
+                      onDelete: () => setState(() => _items.remove(item)),
                       child: _ExerciseSummaryCard(
                         index: index,
                         title: title,
@@ -283,7 +269,7 @@ class _OnboardingTrainingSetupScreenState
                     minimumSize: const Size.fromHeight(52),
                   ),
                   icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Add exercise'),
+                  label: Text(l10n.addExercise),
                 ),
               ],
             ),
@@ -308,7 +294,7 @@ class _OnboardingTrainingSetupScreenState
                   children: <Widget>[
                     Expanded(
                       child: IxButton.ghost(
-                        label: 'Back',
+                        label: l10n.back,
                         onPressed: widget.onBack,
                       ),
                     ),
@@ -316,7 +302,7 @@ class _OnboardingTrainingSetupScreenState
                     Expanded(
                       child: IxButton.primary(
                         key: const Key('training_save_button'),
-                        label: 'Save',
+                        label: l10n.save,
                         onPressed: _canSave ? _save : null,
                       ),
                     ),
@@ -335,8 +321,9 @@ class _OnboardingTrainingSetupScreenState
     List<_ExerciseOpt> available,
     _SetupItem initial,
   ) {
+    final AppLocalizations l10n = ref.read(appStringsProvider);
     String query = '';
-    String group = 'All';
+    String group = l10n.all;
     _SetupItem draft = initial;
     String groupFor(_ExerciseOpt e) => groupForExerciseName(e.name);
     return showModalBottomSheet<_SetupItem>(
@@ -348,13 +335,13 @@ class _OnboardingTrainingSetupScreenState
           builder: (BuildContext context, StateSetter setModalState) {
             final IxThemeColors colors = context.ixColors;
             final List<_ExerciseOpt> filtered = available
-                .where((e) => group == 'All' || groupFor(e) == group)
+                .where((e) => group == l10n.all || groupFor(e) == group)
                 .where(
                   (e) => query.isEmpty || e.name.toLowerCase().contains(query),
                 )
                 .toList(growable: false);
             final List<String> groups = <String>{
-              'All',
+              l10n.all,
               ...available.map(groupFor),
             }.toList(growable: false);
             final String selectedName = _nameForId(
@@ -383,7 +370,7 @@ class _OnboardingTrainingSetupScreenState
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    'Edit exercise',
+                    l10n.editExercise,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
@@ -398,7 +385,7 @@ class _OnboardingTrainingSetupScreenState
                       onChanged: (v) =>
                           setModalState(() => query = v.trim().toLowerCase()),
                       decoration: InputDecoration(
-                        hintText: 'Search exercises',
+                        hintText: l10n.searchExercises,
                         hintStyle: TextStyle(color: colors.softMute),
                         prefixIcon: Icon(
                           Icons.search,
@@ -598,7 +585,7 @@ class _OnboardingTrainingSetupScreenState
                         const SizedBox(height: 10),
                         _StepperPill(
                           keyPrefix: 'exercise_sets',
-                          label: 'Sets',
+                          label: l10n.sets,
                           value: draft.sets,
                           min: 1,
                           onChanged: (int value) => setModalState(
@@ -618,7 +605,7 @@ class _OnboardingTrainingSetupScreenState
                               children: <Widget>[
                                 _ModePill(
                                   key: const Key('exercise_mode_reps'),
-                                  label: 'Reps',
+                                  label: l10n.reps,
                                   active: draft.mode == ExerciseMode.reps,
                                   onTap: () => setModalState(
                                     () => draft = draft.copyWith(
@@ -628,7 +615,7 @@ class _OnboardingTrainingSetupScreenState
                                 ),
                                 _ModePill(
                                   key: const Key('exercise_mode_timer'),
-                                  label: 'Timer',
+                                  label: l10n.timer,
                                   active: draft.mode == ExerciseMode.time,
                                   onTap: () => setModalState(
                                     () => draft = draft.copyWith(
@@ -648,7 +635,7 @@ class _OnboardingTrainingSetupScreenState
                               child: draft.mode == ExerciseMode.time
                                   ? _DurationStepperPill(
                                       keyPrefix: 'exercise_work',
-                                      label: 'Work',
+                                      label: l10n.work,
                                       seconds: draft.value,
                                       min: 5,
                                       step: 5,
@@ -656,7 +643,7 @@ class _OnboardingTrainingSetupScreenState
                                         final int? picked = await _pickDuration(
                                           context,
                                           draft.value,
-                                          'Work duration',
+                                          l10n.workDuration,
                                         );
                                         if (picked != null && picked > 0) {
                                           setModalState(
@@ -674,7 +661,7 @@ class _OnboardingTrainingSetupScreenState
                                     )
                                   : _StepperPill(
                                       keyPrefix: 'exercise_reps',
-                                      label: 'Reps',
+                                      label: l10n.reps,
                                       value: draft.value,
                                       min: 1,
                                       onChanged: (int value) => setModalState(
@@ -688,7 +675,7 @@ class _OnboardingTrainingSetupScreenState
                             Expanded(
                               child: _DurationStepperPill(
                                 keyPrefix: 'exercise_rest',
-                                label: 'Rest',
+                                label: l10n.restLabel,
                                 seconds: draft.restSeconds,
                                 min: 0,
                                 step: 5,
@@ -696,7 +683,7 @@ class _OnboardingTrainingSetupScreenState
                                   final int? picked = await _pickDuration(
                                     context,
                                     draft.restSeconds,
-                                    'Rest duration',
+                                    l10n.restDuration,
                                   );
                                   if (picked != null && picked >= 0) {
                                     setModalState(
@@ -720,7 +707,7 @@ class _OnboardingTrainingSetupScreenState
                           width: double.infinity,
                           child: IxButton.primary(
                             key: const Key('exercise_editor_apply'),
-                            label: 'Apply',
+                            label: l10n.apply,
                             onPressed: () => Navigator.of(context).pop(draft),
                           ),
                         ),
@@ -741,6 +728,7 @@ class _OnboardingTrainingSetupScreenState
     int initialSeconds,
     String title,
   ) {
+    final AppLocalizations l10n = ref.read(appStringsProvider);
     int minutes = initialSeconds ~/ 60;
     int seconds = initialSeconds % 60;
     final FixedExtentScrollController minuteController =
@@ -829,7 +817,7 @@ class _OnboardingTrainingSetupScreenState
                     child: SizedBox(
                       width: double.infinity,
                       child: IxButton.primary(
-                        label: 'Apply',
+                        label: l10n.apply,
                         onPressed: () =>
                             Navigator.of(context).pop((minutes * 60) + seconds),
                       ),
@@ -845,6 +833,7 @@ class _OnboardingTrainingSetupScreenState
   }
 
   Future<void> _openScheduleEditor() async {
+    final AppLocalizations l10n = ref.read(appStringsProvider);
     final _ScheduleDraft? draft = await showModalBottomSheet<_ScheduleDraft>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -883,7 +872,7 @@ class _OnboardingTrainingSetupScreenState
                       const SizedBox(height: 14),
                       Center(
                         child: Text(
-                          'Schedule',
+                          l10n.scheduleLabel,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
@@ -896,6 +885,7 @@ class _OnboardingTrainingSetupScreenState
                         scheduleType: type,
                         weekdays: weekdays,
                         time: time,
+                        l10n: l10n,
                         onTypeChanged: (_ScheduleType next) =>
                             setModalState(() => type = next),
                         onToggleWeekday: (int day) {
@@ -911,7 +901,7 @@ class _OnboardingTrainingSetupScreenState
                           final String? picked = await _pickClock(
                             context,
                             time,
-                            'Reminder time',
+                            l10n.reminderTime,
                           );
                           if (picked != null) {
                             setModalState(() => time = picked);
@@ -923,7 +913,7 @@ class _OnboardingTrainingSetupScreenState
                         width: double.infinity,
                         child: IxButton.primary(
                           key: const Key('schedule_editor_apply'),
-                          label: 'Apply',
+                          label: l10n.apply,
                           onPressed:
                               type == _ScheduleType.custom && weekdays.isEmpty
                               ? null
@@ -959,6 +949,7 @@ class _OnboardingTrainingSetupScreenState
     String initial,
     String title,
   ) {
+    final AppLocalizations l10n = ref.read(appStringsProvider);
     final List<String> parts = initial.split(':');
     int hour = int.tryParse(parts.first) ?? 7;
     int minute = int.tryParse(parts.length > 1 ? parts[1] : '30') ?? 30;
@@ -1046,7 +1037,7 @@ class _OnboardingTrainingSetupScreenState
                     child: SizedBox(
                       width: double.infinity,
                       child: IxButton.primary(
-                        label: 'Apply',
+                        label: l10n.apply,
                         onPressed: () => Navigator.of(context).pop(
                           '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}',
                         ),
@@ -1173,28 +1164,23 @@ class _ScheduleDraft {
   final String time;
 }
 
-String _scheduleSummary(_ScheduleType type, Set<int> weekdays, String time) {
+String _scheduleSummary(_ScheduleType type, Set<int> weekdays, String time, AppLocalizations l10n) {
   if (type == _ScheduleType.off) {
-    return 'Off';
+    return l10n.scheduleOff;
   }
-  return 'Custom · ${_weekdaySummary(weekdays)} · $time';
+  return '${l10n.scheduleCustom} · ${_weekdaySummary(weekdays, l10n)} · $time';
 }
 
-String _weekdaySummary(Set<int> weekdays) {
-  const Map<int, String> labels = <int, String>{
-    1: 'M',
-    2: 'T',
-    3: 'W',
-    4: 'T',
-    5: 'F',
-    6: 'S',
-    7: 'S',
-  };
+String _weekdaySummary(Set<int> weekdays, AppLocalizations l10n) {
+  final Map<int, String> dayNames = l10n.dayNames;
   final List<int> sorted = weekdays.toList()..sort();
   if (sorted.isEmpty) {
-    return 'Pick days';
+    return l10n.schedulePickDays;
   }
-  return sorted.map((int day) => labels[day] ?? '').join(' ');
+  return sorted.map((int day) {
+    final String name = dayNames[day] ?? '';
+    return name.isNotEmpty ? name.substring(0, 1) : '';
+  }).join(' ');
 }
 
 String _exerciseSummary(_SetupItem item) {
@@ -1232,12 +1218,14 @@ class _ScheduleSummaryRow extends StatelessWidget {
     required this.weekdays,
     required this.time,
     required this.onTap,
+    required this.l10n,
   });
 
   final _ScheduleType scheduleType;
   final Set<int> weekdays;
   final String time;
   final VoidCallback onTap;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -1252,7 +1240,7 @@ class _ScheduleSummaryRow extends StatelessWidget {
           child: Row(
             children: <Widget>[
               Text(
-                'Schedule',
+                l10n.scheduleLabel,
                 style: TextStyle(
                   color: colors.ink,
                   fontWeight: FontWeight.w700,
@@ -1262,7 +1250,7 @@ class _ScheduleSummaryRow extends StatelessWidget {
               Expanded(
                 flex: 2,
                 child: Text(
-                  _scheduleSummary(scheduleType, weekdays, time),
+                  _scheduleSummary(scheduleType, weekdays, time, l10n),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.right,
@@ -1290,6 +1278,7 @@ class _ScheduleEditorContent extends StatelessWidget {
     required this.onTypeChanged,
     required this.onToggleWeekday,
     required this.onPickTime,
+    required this.l10n,
   });
 
   final _ScheduleType scheduleType;
@@ -1298,6 +1287,7 @@ class _ScheduleEditorContent extends StatelessWidget {
   final ValueChanged<_ScheduleType> onTypeChanged;
   final ValueChanged<int> onToggleWeekday;
   final VoidCallback onPickTime;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -1310,8 +1300,8 @@ class _ScheduleEditorContent extends StatelessWidget {
             Expanded(
               child: _ScheduleChoiceBox(
                 key: const Key('schedule_off_choice'),
-                title: 'Off',
-                subtitle: 'No reminders',
+                title: l10n.scheduleOff,
+                subtitle: l10n.scheduleNoReminders,
                 active: scheduleType == _ScheduleType.off,
                 onTap: () => onTypeChanged(_ScheduleType.off),
               ),
@@ -1320,8 +1310,8 @@ class _ScheduleEditorContent extends StatelessWidget {
             Expanded(
               child: _ScheduleChoiceBox(
                 key: const Key('schedule_custom_choice'),
-                title: 'Custom',
-                subtitle: 'Pick days',
+                title: l10n.scheduleCustom,
+                subtitle: l10n.schedulePickDays,
                 active: scheduleType == _ScheduleType.custom,
                 onTap: () => onTypeChanged(_ScheduleType.custom),
               ),
@@ -1331,7 +1321,7 @@ class _ScheduleEditorContent extends StatelessWidget {
         if (scheduleType == _ScheduleType.custom) ...<Widget>[
           const SizedBox(height: 14),
           Text(
-            'Days',
+            l10n.daysLabel,
             style: TextStyle(
               color: colors.mute,
               fontSize: 12,
@@ -1341,55 +1331,14 @@ class _ScheduleEditorContent extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: <Widget>[
-              _WeekdayChip(
-                key: const Key('schedule_day_1'),
-                day: 1,
-                label: 'M',
-                active: weekdays.contains(1),
-                onTap: onToggleWeekday,
-              ),
-              _WeekdayChip(
-                key: const Key('schedule_day_2'),
-                day: 2,
-                label: 'T',
-                active: weekdays.contains(2),
-                onTap: onToggleWeekday,
-              ),
-              _WeekdayChip(
-                key: const Key('schedule_day_3'),
-                day: 3,
-                label: 'W',
-                active: weekdays.contains(3),
-                onTap: onToggleWeekday,
-              ),
-              _WeekdayChip(
-                key: const Key('schedule_day_4'),
-                day: 4,
-                label: 'T',
-                active: weekdays.contains(4),
-                onTap: onToggleWeekday,
-              ),
-              _WeekdayChip(
-                key: const Key('schedule_day_5'),
-                day: 5,
-                label: 'F',
-                active: weekdays.contains(5),
-                onTap: onToggleWeekday,
-              ),
-              _WeekdayChip(
-                key: const Key('schedule_day_6'),
-                day: 6,
-                label: 'S',
-                active: weekdays.contains(6),
-                onTap: onToggleWeekday,
-              ),
-              _WeekdayChip(
-                key: const Key('schedule_day_7'),
-                day: 7,
-                label: 'S',
-                active: weekdays.contains(7),
-                onTap: onToggleWeekday,
-              ),
+              for (int day = 1; day <= 7; day++)
+                _WeekdayChip(
+                  key: Key('schedule_day_$day'),
+                  day: day,
+                  label: (l10n.dayNames[day] ?? '').substring(0, 1),
+                  active: weekdays.contains(day),
+                  onTap: onToggleWeekday,
+                ),
             ],
           ),
           const SizedBox(height: 14),
@@ -1402,7 +1351,7 @@ class _ScheduleEditorContent extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 2),
                 child: Row(
                   children: <Widget>[
-                    Text('Reminder', style: TextStyle(color: colors.mute)),
+                    Text(l10n.reminder, style: TextStyle(color: colors.mute)),
                     const Spacer(),
                     Text(
                       time,

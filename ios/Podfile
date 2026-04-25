@@ -39,10 +39,35 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+    target.build_configurations.each do |config|
+      config.build_settings['SWIFT_STRICT_CONCURRENCY'] = 'minimal'
+    end
   end
 
-  # objective_c 9.x ships a pre-signed XCFramework; strip it so Xcode can re-sign for device
-  Dir.glob("#{installer.sandbox.root}/**/objective_c.framework/objective_c").each do |binary|
-    system("codesign --remove-signature '#{binary}'") if File.exist?(binary)
+  # Strip adhoc signature from objective_c Dart native asset.
+  # This runs on pod install; the build phase below covers every build.
+  native_asset = File.expand_path('../build/native_assets/ios/objective_c.framework/objective_c', __FILE__)
+  system("codesign --remove-signature '#{native_asset}'") if File.exist?(native_asset)
+
+  # Add a Run Script build phase to Runner so the signature is stripped
+  # before "Embed Frameworks" on every Xcode build (not just pod install).
+  require 'xcodeproj'
+  project_path = File.expand_path('../Runner.xcodeproj', __FILE__)
+  project = Xcodeproj::Project.open(project_path)
+  runner_target = project.targets.find { |t| t.name == 'Runner' }
+  if runner_target
+    phase_name = 'Strip objective_c adhoc signature'
+    unless runner_target.build_phases.any? { |p| p.respond_to?(:name) && p.name == phase_name }
+      phase = runner_target.new_shell_script_build_phase(phase_name)
+      phase.shell_script = <<~SH
+        find "$BUILT_PRODUCTS_DIR/$FRAMEWORKS_FOLDER_PATH" \\
+          -name "objective_c" ! -name "*.framework" \\
+          -exec codesign --remove-signature {} \\; 2>/dev/null || true
+      SH
+      phase.run_only_for_deployment_postprocessing = '0'
+      # Keep at the end — must run AFTER all embed phases so the
+      # framework is already in $BUILT_PRODUCTS_DIR before we strip it.
+    end
+    project.save
   end
 end

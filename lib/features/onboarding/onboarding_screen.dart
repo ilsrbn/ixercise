@@ -4,6 +4,8 @@ import 'package:ixercise/design_system/ix_button.dart';
 import 'package:ixercise/design_system/theme.dart';
 import 'package:ixercise/features/onboarding/exercise_group_icon.dart';
 import 'package:ixercise/features/onboarding/onboarding_controller.dart';
+import 'package:ixercise/features/settings/locale_controller.dart';
+import 'package:ixercise/l10n/app_localizations.dart';
 
 class OnboardingScreen extends ConsumerWidget {
   const OnboardingScreen({super.key, this.onContinue});
@@ -16,6 +18,7 @@ class OnboardingScreen extends ConsumerWidget {
     final OnboardingController controller = ref.read(
       onboardingControllerProvider.notifier,
     );
+    final AppLocalizations l10n = ref.watch(appStringsProvider);
     final IxThemeColors colors = context.ixColors;
 
     return Scaffold(
@@ -46,7 +49,7 @@ class OnboardingScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'STEP 1 OF 2',
+                  l10n.step1of2,
                   style: TextStyle(
                     fontSize: 11,
                     letterSpacing: 1.2,
@@ -56,7 +59,7 @@ class OnboardingScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Pick exercises\nyou actually do.',
+                  l10n.pickExercisesTitle,
                   style: TextStyle(
                     fontSize: 42,
                     letterSpacing: -1.2,
@@ -67,7 +70,7 @@ class OnboardingScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Build your personal library. You can always add more later.',
+                  l10n.pickExercisesSubtitle,
                   style: TextStyle(
                     fontSize: 15,
                     color: colors.mute,
@@ -79,7 +82,7 @@ class OnboardingScreen extends ConsumerWidget {
                   key: const Key('onboarding_search'),
                   onChanged: controller.setQuery,
                   decoration: InputDecoration(
-                    hintText: 'Search exercises',
+                    hintText: l10n.searchExercises,
                     hintStyle: TextStyle(color: colors.softMute),
                     prefixIcon: Icon(
                       Icons.search,
@@ -234,23 +237,12 @@ class OnboardingScreen extends ConsumerWidget {
                 child: Row(
                   children: <Widget>[
                     Expanded(
-                      child: Text.rich(
-                        TextSpan(
-                          text: '${state.selectedExerciseIds.length}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: colors.ink,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          children: <InlineSpan>[
-                            TextSpan(
-                              text: ' selected',
-                              style: TextStyle(
-                                color: colors.mute,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                      child: Text(
+                        l10n.selected(state.selectedExerciseIds.length),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: colors.mute,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -258,7 +250,7 @@ class OnboardingScreen extends ConsumerWidget {
                       width: 140,
                       child: IxButton.primary(
                         key: const Key('onboarding_continue'),
-                        label: 'Continue',
+                        label: l10n.continueLabel,
                         onPressed: state.canContinue
                             ? () async =>
                                   onContinue?.call(state.selectedExerciseIds)

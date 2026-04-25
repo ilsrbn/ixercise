@@ -7,9 +7,11 @@ import 'package:ixercise/features/done/done_screen.dart';
 import 'package:ixercise/features/home/home_controller.dart';
 import 'package:ixercise/features/home/home_overview_screen.dart';
 import 'package:ixercise/features/onboarding/exercise_icon_preview_screen.dart';
+import 'package:ixercise/features/onboarding/language_screen.dart';
 import 'package:ixercise/features/onboarding/onboarding_training_setup_screen.dart';
 import 'package:ixercise/features/rest/rest_screen.dart';
 import 'package:ixercise/features/session/session_controller.dart';
+import 'package:ixercise/features/settings/locale_controller.dart';
 import 'package:ixercise/features/training_run/training_run_screen.dart';
 
 GoRouter buildRouter() {
@@ -20,18 +22,26 @@ GoRouter buildRouter() {
         path: '/',
         builder: (context, _) => Consumer(
           builder: (BuildContext context, WidgetRef ref, _) {
+            final LocaleState localeState = ref.watch(localeControllerProvider);
             final HomeState home = ref.watch(homeControllerProvider);
-            if (!home.isLoading) {
+            if (!localeState.isLoading) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!context.mounted) {
-                  return;
+                if (!context.mounted) return;
+                if (localeState.locale == null) {
+                  context.go('/language');
+                } else if (!home.isLoading) {
+                  context.go(home.plans.isEmpty ? '/onboarding' : '/home');
                 }
-                context.go(home.plans.isEmpty ? '/onboarding' : '/home');
               });
             }
             return const Scaffold(body: SizedBox.shrink());
           },
         ),
+      ),
+      GoRoute(
+        path: '/language',
+        builder: (context, _) =>
+            LanguageScreen(onSelected: () => context.go('/')),
       ),
       GoRoute(
         path: '/onboarding',

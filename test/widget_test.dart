@@ -13,7 +13,9 @@ import 'package:ixercise/app/shell.dart';
 
 void main() {
   setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      kLocaleKey: 'en',
+    });
   });
 
   testWidgets('app boots into onboarding when no trainings are saved', (
@@ -29,6 +31,7 @@ void main() {
     WidgetTester tester,
   ) async {
     SharedPreferences.setMockInitialValues(<String, Object>{
+      kLocaleKey: 'en',
       kTrainingPlansKey: jsonEncode(<Map<String, dynamic>>[
         <String, dynamic>{
           'id': 'saved-plan',

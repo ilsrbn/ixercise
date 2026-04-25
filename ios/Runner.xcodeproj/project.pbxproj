@@ -267,6 +267,7 @@
 				AA0000330000000000000001 /* Embed Foundation Extensions */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				60DE277495DF91427119F8B0 /* [CP] Embed Pods Frameworks */,
+				571329C93A770490CBEBD331 /* Strip objective_c adhoc signature */,
 			);
 			buildRules = (
 			);
@@ -382,6 +383,24 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" embed_and_thin";
+		};
+		571329C93A770490CBEBD331 /* Strip objective_c adhoc signature */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Strip objective_c adhoc signature";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Strip adhoc signature from objective_c so Xcode can properly re-sign for device.\nfind \"$BUILT_PRODUCTS_DIR/$FRAMEWORKS_FOLDER_PATH\" \\\n  -name \"objective_c\" ! -name \"*.framework\" \\\n  -exec codesign --remove-signature {} \\; 2>/dev/null || true\n# Also strip from native_assets source so future incremental builds are clean.\nNA=\"$SRCROOT/../build/native_assets/ios/objective_c.framework/objective_c\"\n[ -f \"$NA\" ] && codesign --remove-signature \"$NA\" 2>/dev/null || true\n";
 		};
 		60DE277495DF91427119F8B0 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;

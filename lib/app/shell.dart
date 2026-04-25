@@ -11,6 +11,7 @@ import 'package:ixercise/features/notifications/training_reminder_service.dart';
 import 'package:ixercise/features/session/session_controller.dart';
 import 'package:ixercise/features/session/session_feedback_service.dart';
 import 'package:ixercise/features/settings/feedback_settings_controller.dart';
+import 'package:ixercise/features/settings/locale_controller.dart';
 
 class IxerciseApp extends ConsumerWidget {
   IxerciseApp({super.key, GoRouter? router})
@@ -23,6 +24,7 @@ class IxerciseApp extends ConsumerWidget {
     final FeedbackSettings settings = ref.watch(
       feedbackSettingsControllerProvider,
     );
+    final LocaleState localeState = ref.watch(localeControllerProvider);
     ref.listen<SessionUiState>(sessionControllerProvider, (
       SessionUiState? previous,
       SessionUiState next,
@@ -76,6 +78,7 @@ class IxerciseApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Ixercise',
       debugShowCheckedModeBanner: false,
+      locale: localeState.locale ?? const Locale('en'),
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
       themeMode: _themeModeFor(settings.themeMode),

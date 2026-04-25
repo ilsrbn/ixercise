@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ixercise/design_system/theme.dart';
 import 'package:ixercise/features/session/session_controller.dart';
+import 'package:ixercise/features/settings/locale_controller.dart';
+import 'package:ixercise/l10n/app_localizations.dart';
 
 class DoneScreen extends ConsumerWidget {
   const DoneScreen({super.key, required this.sessionId, this.onBackHome});
@@ -12,6 +14,7 @@ class DoneScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(sessionControllerProvider);
+    final AppLocalizations l10n = ref.watch(appStringsProvider);
     final IxThemeColors colors = context.ixColors;
 
     return Scaffold(
@@ -24,9 +27,9 @@ class DoneScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    const Text(
-                      'COMPLETE',
-                      style: TextStyle(
+                    Text(
+                      l10n.completeLabel,
+                      style: const TextStyle(
                         color: Color(0xFFE11D2E),
                         fontSize: 12,
                         letterSpacing: 1.4,
@@ -34,9 +37,9 @@ class DoneScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    const Text(
-                      'Done.',
-                      style: TextStyle(
+                    Text(
+                      l10n.doneBigLabel,
+                      style: const TextStyle(
                         fontSize: 62,
                         height: 1,
                         letterSpacing: -1.8,
@@ -55,7 +58,7 @@ class DoneScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'TOTAL TIME',
+                      l10n.totalTime,
                       style: TextStyle(
                         fontSize: 13,
                         letterSpacing: 1.2,
@@ -81,7 +84,7 @@ class DoneScreen extends ConsumerWidget {
                     foregroundColor: colors.inverse,
                     shape: const StadiumBorder(),
                   ),
-                  child: const Text('Back home'),
+                  child: Text(l10n.backHome),
                 ),
               ),
             ),

@@ -79,3 +79,17 @@ final trainingReminderIdRepositoryProvider =
     Provider<TrainingReminderIdRepository>(
       (ref) => TrainingReminderIdRepository(ref.watch(localStoreProvider)),
     );
+
+class LocaleRepository {
+  LocaleRepository(this._store);
+
+  final LocalStore _store;
+
+  Future<String?> load() => _store.loadLocale();
+
+  Future<void> save(String code) => _store.saveLocale(code);
+}
+
+final localeRepositoryProvider = Provider<LocaleRepository>(
+  (ref) => LocaleRepository(ref.watch(localStoreProvider)),
+);

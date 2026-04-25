@@ -10,6 +10,8 @@ import 'package:ixercise/domain/models.dart';
 import 'package:ixercise/features/onboarding/exercise_catalog.dart';
 import 'package:ixercise/features/onboarding/exercise_group_icon.dart';
 import 'package:ixercise/features/session/session_controller.dart';
+import 'package:ixercise/features/settings/locale_controller.dart';
+import 'package:ixercise/l10n/app_localizations.dart';
 
 class TrainingRunScreen extends ConsumerStatefulWidget {
   const TrainingRunScreen({
@@ -58,6 +60,7 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen>
   Widget build(BuildContext context) {
     final state = ref.watch(sessionControllerProvider);
     final controller = ref.read(sessionControllerProvider.notifier);
+    final AppLocalizations l10n = ref.watch(appStringsProvider);
     final SessionState session = state.session;
     final TrainingExercise item = state.currentItem;
     final bool isTime = item.mode == ExerciseMode.time;
@@ -97,7 +100,7 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen>
                         vertical: 2,
                       ),
                       child: Text(
-                        'END SESSION',
+                        l10n.endSession,
                         style: TextStyle(
                           fontSize: 11,
                           letterSpacing: 1.2,
@@ -131,7 +134,7 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      'NOW',
+                      l10n.nowLabel,
                       style: TextStyle(
                         fontSize: 12,
                         letterSpacing: 1.2,
@@ -189,7 +192,7 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen>
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 220),
                       child: Text(
-                        isTime ? 'Seconds remaining' : 'Reps to complete',
+                        isTime ? l10n.secondsRemaining : l10n.repsToComplete,
                         key: ValueKey<String>(item.mode.name),
                         style: TextStyle(fontSize: 14, color: colors.mute),
                       ),
@@ -218,7 +221,7 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen>
                                 child: Row(
                                   children: <Widget>[
                                     Text(
-                                      'NEXT',
+                                      l10n.nextLabel,
                                       style: TextStyle(
                                         fontSize: 10,
                                         letterSpacing: 1.2,
@@ -296,8 +299,8 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen>
                       ),
                       label: Text(
                         session.status == SessionStatus.paused
-                            ? 'Resume'
-                            : 'Pause',
+                            ? l10n.resume
+                            : l10n.pause,
                       ),
                     ),
                   ),
@@ -314,7 +317,7 @@ class _TrainingRunScreenState extends ConsumerState<TrainingRunScreen>
                         foregroundColor: colors.inverse,
                       ),
                       icon: const Icon(Icons.check),
-                      label: Text(isTime ? 'Skip' : 'Done'),
+                      label: Text(isTime ? l10n.skipLabel : l10n.doneLabel),
                     ),
                   ),
                 ],

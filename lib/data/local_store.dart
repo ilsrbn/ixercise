@@ -10,6 +10,7 @@ const String kTrainingPlansKey = 'ixercise_training_plans';
 const String kSchedulesKey = 'ixercise_schedules';
 const String kFeedbackSettingsKey = 'ixercise_feedback_settings';
 const String kTrainingReminderIdsKey = 'ixercise_training_reminder_ids';
+const String kLocaleKey = 'ixercise_locale';
 
 class LocalStore {
   const LocalStore();
@@ -146,6 +147,16 @@ class LocalStore {
     final prefs = await _prefs();
     await writeSchemaVersion();
     await prefs.setString(kTrainingReminderIdsKey, jsonEncode(ids));
+  }
+
+  Future<String?> loadLocale() async {
+    final prefs = await _prefs();
+    return prefs.getString(kLocaleKey);
+  }
+
+  Future<void> saveLocale(String code) async {
+    final prefs = await _prefs();
+    await prefs.setString(kLocaleKey, code);
   }
 }
 

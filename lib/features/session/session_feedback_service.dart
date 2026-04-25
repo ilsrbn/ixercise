@@ -75,19 +75,27 @@ class SessionFeedbackService {
     SessionUiState next,
     FeedbackSettings settings,
   ) {
-    if (!settings.countdownTicksEnabled ||
-        next.session.status != SessionStatus.running ||
-        next.currentItem.mode != ExerciseMode.time) {
+    if (!settings.countdownTicksEnabled) {
       return false;
     }
+    final SessionStatus nextStatus = next.session.status;
     final int? previousRemaining = previous.session.remainingSeconds;
     final int? nextRemaining = next.session.remainingSeconds;
     if (previousRemaining == null || nextRemaining == null) {
       return false;
     }
-    return previousRemaining > nextRemaining &&
+    final bool countdown =
+        previousRemaining > nextRemaining &&
         nextRemaining > 0 &&
         nextRemaining <= 3;
+    if (nextStatus == SessionStatus.running &&
+        next.currentItem.mode == ExerciseMode.time) {
+      return countdown;
+    }
+    if (nextStatus == SessionStatus.resting) {
+      return countdown;
+    }
+    return false;
   }
 
   Future<void> _play(

@@ -9,6 +9,8 @@ import 'package:ixercise/design_system/ix_progress_bar.dart';
 import 'package:ixercise/features/onboarding/exercise_catalog.dart';
 import 'package:ixercise/features/onboarding/exercise_group_icon.dart';
 import 'package:ixercise/features/session/session_controller.dart';
+import 'package:ixercise/features/settings/locale_controller.dart';
+import 'package:ixercise/l10n/app_localizations.dart';
 
 class RestScreen extends ConsumerStatefulWidget {
   const RestScreen({
@@ -57,10 +59,14 @@ class _RestScreenState extends ConsumerState<RestScreen>
   Widget build(BuildContext context) {
     final state = ref.watch(sessionControllerProvider);
     final controller = ref.read(sessionControllerProvider.notifier);
+    final AppLocalizations l10n = ref.watch(appStringsProvider);
     final int remaining = state.session.remainingSeconds ?? 0;
     final int restTotal =
         state.plan.items[state.session.currentIndex].restSeconds;
     final double progress = restTotal <= 0 ? 1 : (1 - (remaining / restTotal));
+    final int total = state.plan.items.length;
+    final int index = state.session.currentIndex + 1;
+    final double overallProgress = total == 0 ? 0 : state.session.currentIndex / total;
 
     if (state.session.status == SessionStatus.running) {
       WidgetsBinding.instance.addPostFrameCallback(
@@ -98,14 +104,27 @@ class _RestScreenState extends ConsumerState<RestScreen>
                     ),
                   ),
                   const Spacer(),
+                  Text(
+                    '${index.toString().padLeft(2, '0')} / ${total.toString().padLeft(2, '0')}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      letterSpacing: 1,
+                      color: Color(0x88FFFFFF),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   GestureDetector(
                     onTap: controller.endSession,
                     behavior: HitTestBehavior.opaque,
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
+                      ),
                       child: Text(
-                        'END',
-                        style: TextStyle(
+                        l10n.endLabel,
+                        style: const TextStyle(
                           fontSize: 11,
                           color: Color(0x88FFFFFF),
                           letterSpacing: 1.2,
@@ -116,6 +135,10 @@ class _RestScreenState extends ConsumerState<RestScreen>
                   ),
                 ],
               ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
+              child: IxProgressBar(value: overallProgress, height: 3),
             ),
             Expanded(
               child: IxPhaseSwitcher(
@@ -138,9 +161,9 @@ class _RestScreenState extends ConsumerState<RestScreen>
                         ),
                       ),
                       const SizedBox(height: 12),
-                      const Text(
-                        'SECONDS',
-                        style: TextStyle(
+                      Text(
+                        l10n.secondsLabel,
+                        style: const TextStyle(
                           fontSize: 12,
                           letterSpacing: 1.4,
                           color: Color(0x88FFFFFF),
@@ -214,9 +237,9 @@ class _RestScreenState extends ConsumerState<RestScreen>
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
-                                const Text(
-                                  'NEXT UP',
-                                  style: TextStyle(
+                                Text(
+                                  l10n.nextUpLabel,
+                                  style: const TextStyle(
                                     fontSize: 10,
                                     letterSpacing: 1.3,
                                     color: Color(0x88FFFFFF),
@@ -257,8 +280,8 @@ class _RestScreenState extends ConsumerState<RestScreen>
                       ),
                       child: Text(
                         state.session.status == SessionStatus.paused
-                            ? 'Resume'
-                            : 'Pause',
+                            ? l10n.resume
+                            : l10n.pause,
                       ),
                     ),
                   ),
@@ -274,7 +297,7 @@ class _RestScreenState extends ConsumerState<RestScreen>
                         backgroundColor: Colors.white,
                         foregroundColor: const Color(0xFF0A0A0A),
                       ),
-                      child: const Text('Skip rest →'),
+                      child: Text(l10n.skipRest),
                     ),
                   ),
                 ],

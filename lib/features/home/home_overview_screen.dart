@@ -6,6 +6,8 @@ import 'package:ixercise/design_system/theme.dart';
 import 'package:ixercise/domain/models.dart';
 import 'package:ixercise/features/home/home_controller.dart';
 import 'package:ixercise/features/settings/feedback_settings_sheet.dart';
+import 'package:ixercise/features/settings/locale_controller.dart';
+import 'package:ixercise/l10n/app_localizations.dart';
 
 class HomeOverviewScreen extends ConsumerStatefulWidget {
   const HomeOverviewScreen({
@@ -39,6 +41,7 @@ class _HomeOverviewScreenState extends ConsumerState<HomeOverviewScreen> {
   @override
   Widget build(BuildContext context) {
     final homeState = ref.watch(homeControllerProvider);
+    final AppLocalizations l10n = ref.watch(appStringsProvider);
     final List<TrainingPlan> todaysPlans = _plansScheduledToday(homeState);
     final IxThemeColors colors = context.ixColors;
 
@@ -53,7 +56,7 @@ class _HomeOverviewScreenState extends ConsumerState<HomeOverviewScreen> {
               Row(
                 children: <Widget>[
                   const Text(
-                    'Ixercise',
+                    'Ixercise', // app name stays fixed
                     style: TextStyle(
                       fontSize: 30,
                       fontWeight: FontWeight.w700,
@@ -77,7 +80,7 @@ class _HomeOverviewScreenState extends ConsumerState<HomeOverviewScreen> {
               ),
               const SizedBox(height: 14),
               Text(
-                _todayLabel(),
+                _todayLabel(l10n),
                 style: TextStyle(
                   fontSize: 11,
                   letterSpacing: 1.1,
@@ -87,7 +90,7 @@ class _HomeOverviewScreenState extends ConsumerState<HomeOverviewScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                _headlineForToday(todaysPlans, homeState.schedulesByPlanId),
+                _headlineForToday(todaysPlans, homeState.schedulesByPlanId, l10n),
                 style: const TextStyle(
                   fontSize: 46,
                   letterSpacing: -1.4,
@@ -99,7 +102,7 @@ class _HomeOverviewScreenState extends ConsumerState<HomeOverviewScreen> {
               Row(
                 children: <Widget>[
                   Text(
-                    'YOUR TRAININGS · ${homeState.plans.length}',
+                    '${l10n.yourTrainings} · ${homeState.plans.length}',
                     style: TextStyle(
                       fontSize: 11,
                       letterSpacing: 1.2,
@@ -116,8 +119,8 @@ class _HomeOverviewScreenState extends ConsumerState<HomeOverviewScreen> {
                       shape: const StadiumBorder(),
                     ),
                     icon: const Icon(Icons.add, size: 16),
-                    label: const Text(
-                      'New',
+                    label: Text(
+                      l10n.newTraining,
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
@@ -133,7 +136,7 @@ class _HomeOverviewScreenState extends ConsumerState<HomeOverviewScreen> {
                     : homeState.plans.isEmpty
                     ? Center(
                         child: Text(
-                          'No trainings yet.\nTap New to create your first one.',
+                          l10n.noTrainingsYet,
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 16,
@@ -185,7 +188,7 @@ class _HomeOverviewScreenState extends ConsumerState<HomeOverviewScreen> {
                                             ),
                                             const SizedBox(height: 4),
                                             Text(
-                                              '${plan.items.length} exercises · ${_estimatedDuration(plan)} · ${_scheduleLabel(homeState.schedulesByPlanId[plan.id])}',
+                                              '${plan.items.length} ${l10n.exercises} · ${_estimatedDuration(plan)} · ${_scheduleLabel(homeState.schedulesByPlanId[plan.id], l10n)}',
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               style: TextStyle(
@@ -255,31 +258,10 @@ class _HomeOverviewScreenState extends ConsumerState<HomeOverviewScreen> {
     return '${m}m ${s}s';
   }
 
-  String _todayLabel() {
+  String _todayLabel(AppLocalizations l10n) {
     final DateTime now = DateTime.now();
-    const List<String> weekdays = <String>[
-      'MON',
-      'TUE',
-      'WED',
-      'THU',
-      'FRI',
-      'SAT',
-      'SUN',
-    ];
-    const List<String> months = <String>[
-      'JAN',
-      'FEB',
-      'MAR',
-      'APR',
-      'MAY',
-      'JUN',
-      'JUL',
-      'AUG',
-      'SEP',
-      'OCT',
-      'NOV',
-      'DEC',
-    ];
+    final List<String> weekdays = l10n.weekdayLabels;
+    final List<String> months = l10n.monthLabels;
     return '${weekdays[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
   }
 
@@ -306,48 +288,43 @@ class _HomeOverviewScreenState extends ConsumerState<HomeOverviewScreen> {
   String _headlineForToday(
     List<TrainingPlan> todaysPlans,
     Map<String, Map<String, dynamic>> schedulesByPlanId,
+    AppLocalizations l10n,
   ) {
     if (todaysPlans.isEmpty) {
-      return 'Nothing scheduled.';
+      return l10n.nothingScheduled;
     }
     if (todaysPlans.length == 1) {
       final TrainingPlan plan = todaysPlans.first;
       final String time = schedulesByPlanId[plan.id]?['time'] as String? ?? '';
-      return time.isEmpty ? '${plan.name}\ntoday.' : '${plan.name}\nat $time.';
+      return time.isEmpty
+          ? l10n.trainingToday(plan.name)
+          : l10n.trainingTodayAt(plan.name, time);
     }
-    return '${todaysPlans.length} trainings\ntoday.';
+    return l10n.multipleTrainingsToday(todaysPlans.length);
   }
 
-  String _scheduleLabel(Map<String, dynamic>? schedule) {
+  String _scheduleLabel(Map<String, dynamic>? schedule, AppLocalizations l10n) {
     if (schedule == null) {
-      return 'Not scheduled';
+      return l10n.notScheduled;
     }
     final String type = schedule['type'] as String? ?? 'none';
     final String time = schedule['time'] as String? ?? '';
     if (type == 'alternating') {
-      return time.isEmpty ? 'Custom schedule' : 'Custom · $time';
+      return time.isEmpty ? l10n.customSchedule : '${l10n.scheduleCustom} · $time';
     }
     if (type == 'weekdays') {
       final List<dynamic> raw =
           schedule['weekdays'] as List<dynamic>? ?? <dynamic>[];
-      const Map<int, String> dayNames = <int, String>{
-        1: 'Mon',
-        2: 'Tue',
-        3: 'Wed',
-        4: 'Thu',
-        5: 'Fri',
-        6: 'Sat',
-        7: 'Sun',
-      };
+      final Map<int, String> dayNames = l10n.dayNames;
       final List<String> days = raw
           .whereType<int>()
           .map((int d) => dayNames[d] ?? '')
           .where((String d) => d.isNotEmpty)
           .toList(growable: false);
-      final String dayText = days.isEmpty ? 'Custom' : days.join(' · ');
+      final String dayText = days.isEmpty ? l10n.scheduleCustom : days.join(' · ');
       return time.isEmpty ? dayText : '$dayText · $time';
     }
-    return 'Not scheduled';
+    return l10n.notScheduled;
   }
 }
 
